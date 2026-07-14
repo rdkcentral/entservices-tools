@@ -21,7 +21,6 @@
 
 #include <mutex>
 #include "Module.h"
-#include "libIARM.h"
 
 #include <interfaces/ITools.h>
 #include <interfaces/json/JTools.h>

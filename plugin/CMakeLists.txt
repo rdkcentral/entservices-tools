@@ -45,21 +45,10 @@ set_source_files_properties(Tools.cpp ToolsImplimentation.cpp PROPERTIES COMPILE
 target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NAME})
 target_compile_definitions(${PLUGIN_IMPLEMENTATION} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NAME})
 
-find_package(IARMBus)
-if (IARMBUS_FOUND)
-    target_include_directories(${MODULE_NAME} PRIVATE ${IARMBUS_INCLUDE_DIRS})
-    target_include_directories(${MODULE_NAME} PRIVATE ../plugin)
-    target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${IARMBUS_LIBRARIES} ${NAMESPACE}::${NAMESPACE}Helpers)
-
-    target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${IARMBUS_INCLUDE_DIRS})
-    target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ../plugin)
-    target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${IARMBUS_LIBRARIES} ${NAMESPACE}::${NAMESPACE}Helpers)
-else (IARMBUS_FOUND)
-    target_include_directories(${MODULE_NAME} PRIVATE ../plugin)
-    target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ../plugin)
-    target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${NAMESPACE}::${NAMESPACE}Helpers)
-    target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${NAMESPACE}::${NAMESPACE}Helpers)
-endif(IARMBUS_FOUND)
+target_include_directories(${MODULE_NAME} PRIVATE ../plugin)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ../plugin)
+target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${NAMESPACE}::${NAMESPACE}Helpers)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${NAMESPACE}::${NAMESPACE}Helpers)
 
 install(TARGETS ${MODULE_NAME}
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
