@@ -1,0 +1,12 @@
+precondition = ["Platform"]
+callsign = "org.rdk.Tools"
+autostart = "false"
+startuporder = "@PLUGIN_TOOLS_STARTUPORDER@"
+
+
+configuration = JSON()
+rootobject = JSON()
+
+rootobject.add("mode", "@PLUGIN_TOOLS_MODE@")
+rootobject.add("locator", "lib@PLUGIN_IMPLEMENTATION@.so")
+configuration.add("root", rootobject)

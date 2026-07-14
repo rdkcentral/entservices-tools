@@ -1,0 +1,49 @@
+# RDK EntServices Tools
+
+WPEFramework (Thunder) plugin that exposes device tool operations through JSON-RPC and COM-RPC.
+
+## Current Scope
+
+- Plugin name: `Tools`
+- Callsign: `org.rdk.Tools`
+- Autostart: `false`
+- Primary implemented capability: generate Linux key events through a queued worker thread
+
+## Repository Layout
+
+- `plugin/`: plugin interface and implementation sources
+- `CMakeLists.txt`: top-level build entry
+- `services.cmake`: plugin feature selection options
+
+## Build
+
+Typical out-of-tree CMake flow:
+
+```sh
+cmake -S . -B build
+cmake --build build
+```
+
+Build includes:
+
+- Shared plugin library (`${NAMESPACE}Tools`)
+- Shared implementation library (`${NAMESPACE}ToolsImplementation`)
+- Generated plugin config from `plugin/Tools.conf.in` and `plugin/Tools.config`
+
+## Runtime Configuration
+
+Configuration template is defined in:
+
+- `plugin/Tools.conf.in`
+- `plugin/Tools.config`
+
+Important fields:
+
+- `callsign`: `org.rdk.Tools`
+- `root.locator`: `lib@PLUGIN_IMPLEMENTATION@.so`
+- `root.mode`: `@PLUGIN_TOOLS_MODE@`
+
+## Notes
+
+- The implementation source file is currently named `ToolsImplimentation.cpp`.
+- JSON payload validation for key generation is strict and rejects malformed key, modifier, delay, and duration values.
