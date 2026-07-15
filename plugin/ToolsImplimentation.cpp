@@ -4,23 +4,15 @@
 
 #include <chrono>
 #include <cmath>
+#include <cstring>
+
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include <linux/input.h>
-
-extern "C" {
-typedef void (*uinput_dispatcher_t)(int keyCode, int keyType, int source);
-int UINPUT_init(void);
-uinput_dispatcher_t UINPUT_GetDispatcher(void);
-int UINPUT_term(void);
-}
-
-#ifndef KET_KEYDOWN
-#define KET_KEYDOWN 0x00008000UL
-#endif
-
-#ifndef KET_KEYUP
-#define KET_KEYUP 0x00008100UL
-#endif
+#include <linux/uinput.h>
 
 #define API_VERSION_NUMBER_MAJOR 1
 #define API_VERSION_NUMBER_MINOR 0
@@ -35,6 +27,7 @@ ToolsImplementation::ToolsImplementation()
 	: _sendKeyThreadExit(false)
 	, _sendKeyThreadRun(false)
 	, _uinputInitialized(false)
+	, _uinputFd(-1)
 {
 }
 
@@ -62,9 +55,97 @@ void ToolsImplementation::StopWorkerThread()
 	}
 
 	if (_uinputInitialized) {
-		UINPUT_term();
+		ShutdownUinputDevice();
 		_uinputInitialized = false;
 	}
+}
+
+bool ToolsImplementation::InitializeUinputDevice()
+{
+	if (_uinputFd >= 0) {
+		return true;
+	}
+
+	int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+	if (fd < 0) {
+		LOGERR("ToolsImplementation::InitializeUinputDevice open(/dev/uinput) failed: %s", strerror(errno));
+		return false;
+	}
+
+	bool success = true;
+	if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0 || ioctl(fd, UI_SET_EVBIT, EV_SYN) < 0) {
+		success = false;
+	}
+
+	if (success) {
+		for (int keyCode = 0; keyCode <= KEY_MAX; ++keyCode) {
+			if (ioctl(fd, UI_SET_KEYBIT, keyCode) < 0) {
+				success = false;
+				break;
+			}
+		}
+	}
+
+	if (success) {
+		struct uinput_setup setup;
+		memset(&setup, 0, sizeof(setup));
+		snprintf(setup.name, UINPUT_MAX_NAME_SIZE, "tools-key-simulator");
+		setup.id.bustype = BUS_USB;
+		setup.id.vendor = 0xBEEF;
+		setup.id.product = 0xFEED;
+		setup.id.version = 1;
+
+		if (ioctl(fd, UI_DEV_SETUP, &setup) < 0 || ioctl(fd, UI_DEV_CREATE) < 0) {
+			success = false;
+		}
+	}
+
+	if (!success) {
+		LOGERR("ToolsImplementation::InitializeUinputDevice setup failed: %s", strerror(errno));
+		close(fd);
+		return false;
+	}
+
+	_uinputFd = fd;
+	return true;
+}
+
+void ToolsImplementation::ShutdownUinputDevice()
+{
+	if (_uinputFd >= 0) {
+		ioctl(_uinputFd, UI_DEV_DESTROY);
+		close(_uinputFd);
+		_uinputFd = -1;
+	}
+}
+
+bool ToolsImplementation::SendKeyEvent(const uint32_t keyCode, const bool pressed)
+{
+	if (_uinputFd < 0) {
+		return false;
+	}
+
+	struct input_event event;
+	memset(&event, 0, sizeof(event));
+	gettimeofday(&event.time, nullptr);
+	event.type = EV_KEY;
+	event.code = static_cast<__u16>(keyCode);
+	event.value = pressed ? 1 : 0;
+
+	if (write(_uinputFd, &event, sizeof(event)) != sizeof(event)) {
+		LOGERR("ToolsImplementation::SendKeyEvent failed to write key event: %s", strerror(errno));
+		return false;
+	}
+
+	event.type = EV_SYN;
+	event.code = SYN_REPORT;
+	event.value = 0;
+	if (write(_uinputFd, &event, sizeof(event)) != sizeof(event)) {
+		LOGERR("ToolsImplementation::SendKeyEvent failed to write sync event: %s", strerror(errno));
+		return false;
+	}
+
+	return true;
 }
 
 uint32_t ToolsImplementation::ModifierToLinuxKeyCode(const string& modifier) const
@@ -84,31 +165,30 @@ uint32_t ToolsImplementation::ModifierToLinuxKeyCode(const string& modifier) con
 
 void ToolsImplementation::DispatchQueuedKeyEvent(const QueuedKeyEvent& keyEvent)
 {
-	uinput_dispatcher_t dispatcher = UINPUT_GetDispatcher();
-	if (dispatcher == nullptr) {
-		LOGERR("ToolsImplementation::DispatchQueuedKeyEvent dispatcher unavailable");
+	if ((_uinputInitialized == false) || (_uinputFd < 0)) {
+		LOGERR("ToolsImplementation::DispatchQueuedKeyEvent uinput is not initialized");
 		return;
 	}
 
 	for (const auto& modifier : keyEvent.modifiers) {
 		const uint32_t modifierCode = ModifierToLinuxKeyCode(modifier);
 		if (modifierCode != KEY_RESERVED) {
-			dispatcher(static_cast<int>(modifierCode), KET_KEYDOWN, 0);
+			SendKeyEvent(modifierCode, true);
 		}
 	}
 
-	dispatcher(static_cast<int>(keyEvent.keyCode), KET_KEYDOWN, 0);
+	SendKeyEvent(keyEvent.keyCode, true);
 
 	if (keyEvent.durationMs > 0) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(keyEvent.durationMs));
 	}
 
-	dispatcher(static_cast<int>(keyEvent.keyCode), KET_KEYUP, 0);
+	SendKeyEvent(keyEvent.keyCode, false);
 
 	for (auto it = keyEvent.modifiers.rbegin(); it != keyEvent.modifiers.rend(); ++it) {
 		const uint32_t modifierCode = ModifierToLinuxKeyCode(*it);
 		if (modifierCode != KEY_RESERVED) {
-			dispatcher(static_cast<int>(modifierCode), KET_KEYUP, 0);
+			SendKeyEvent(modifierCode, false);
 		}
 	}
 }
@@ -165,8 +245,8 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 	}
 
 	if (_uinputInitialized == false) {
-		if (UINPUT_init() != 0) {
-			LOGERR("ToolsImplementation::Configure failed, UINPUT_init returned error");
+		if (InitializeUinputDevice() == false) {
+			LOGERR("ToolsImplementation::Configure failed to initialize uinput device");
 			return Core::ERROR_GENERAL;
 		}
 		_uinputInitialized = true;

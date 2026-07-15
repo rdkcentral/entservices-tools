@@ -27,6 +27,9 @@ private:
 
 	uint32_t ModifierToLinuxKeyCode(const string& modifier) const;
 	void DispatchQueuedKeyEvent(const QueuedKeyEvent& keyEvent);
+	bool InitializeUinputDevice();
+	void ShutdownUinputDevice();
+	bool SendKeyEvent(const uint32_t keyCode, const bool pressed);
 	void StopWorkerThread();
 	void threadSendKeyEvent();
 
@@ -49,6 +52,7 @@ private:
 	bool _sendKeyThreadExit;
 	bool _sendKeyThreadRun;
 	bool _uinputInitialized;
+	int _uinputFd;
 };
 
 } // namespace Plugin
