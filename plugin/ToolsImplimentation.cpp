@@ -29,15 +29,18 @@ ToolsImplementation::ToolsImplementation()
 	, _uinputInitialized(false)
 	, _uinputFd(-1)
 {
+	LOGERR("%s: Enter", __FUNCTION__);
 }
 
 ToolsImplementation::~ToolsImplementation()
 {
+	LOGERR("%s: Enter", __FUNCTION__);
 	stopWorkerThread();
 }
 
 void ToolsImplementation::stopWorkerThread()
 {
+	LOGERR("%s: Enter", __FUNCTION__);
 	{
 		std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
 		_sendKeyThreadExit = true;
@@ -62,6 +65,7 @@ void ToolsImplementation::stopWorkerThread()
 
 bool ToolsImplementation::initializeUinputDevice()
 {
+	LOGERR("%s: Enter", __FUNCTION__);
 	if (_uinputFd >= 0) {
 		return true;
 	}
@@ -112,6 +116,7 @@ bool ToolsImplementation::initializeUinputDevice()
 
 void ToolsImplementation::shutdownUinputDevice()
 {
+	LOGERR("%s: Enter", __FUNCTION__);
 	if (_uinputFd >= 0) {
 		ioctl(_uinputFd, UI_DEV_DESTROY);
 		close(_uinputFd);
@@ -121,6 +126,7 @@ void ToolsImplementation::shutdownUinputDevice()
 
 bool ToolsImplementation::sendKeyEvent(const uint32_t keyCode, const bool pressed)
 {
+	LOGERR("%s: Enter", __FUNCTION__);
 	if (_uinputFd < 0) {
 		return false;
 	}
@@ -150,6 +156,7 @@ bool ToolsImplementation::sendKeyEvent(const uint32_t keyCode, const bool presse
 
 uint32_t ToolsImplementation::modifierToLinuxKeyCode(const string& modifier) const
 {
+	LOGERR("%s: Enter", __FUNCTION__);
 	if (modifier == "ctrl") {
 		return KEY_LEFTCTRL;
 	}
@@ -165,6 +172,7 @@ uint32_t ToolsImplementation::modifierToLinuxKeyCode(const string& modifier) con
 
 void ToolsImplementation::dispatchQueuedKeyEvent(const QueuedKeyEvent& keyEvent)
 {
+	LOGERR("%s: Enter", __FUNCTION__);
 	if ((_uinputInitialized == false) || (_uinputFd < 0)) {
 		LOGERR("ToolsImplementation::dispatchQueuedKeyEvent uinput is not initialized");
 		return;
@@ -195,6 +203,7 @@ void ToolsImplementation::dispatchQueuedKeyEvent(const QueuedKeyEvent& keyEvent)
 
 void ToolsImplementation::threadSendKeyEvent()
 {
+	LOGERR("%s: Enter", __FUNCTION__);
 	while (true) {
 		QueuedKeyEvent keyEvent;
 		{
@@ -239,6 +248,7 @@ void ToolsImplementation::threadSendKeyEvent()
  */
 Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 {
+	LOGERR("%s: Enter", __FUNCTION__);
 	if (service == nullptr) {
 		LOGERR("ToolsImplementation::Configure failed, service is null");
 		return Core::ERROR_GENERAL;
@@ -283,6 +293,7 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
  */
 Core::hresult ToolsImplementation::GenerateKey(const string& keys, bool& success)
 {
+	LOGERR("%s: Enter", __FUNCTION__);
 	if (keys.empty()) {
 		success = false;
 		return Core::ERROR_INVALID_INPUT_LENGTH;
