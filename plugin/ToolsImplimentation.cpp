@@ -33,10 +33,10 @@ ToolsImplementation::ToolsImplementation()
 
 ToolsImplementation::~ToolsImplementation()
 {
-	StopWorkerThread();
+	stopWorkerThread();
 }
 
-void ToolsImplementation::StopWorkerThread()
+void ToolsImplementation::stopWorkerThread()
 {
 	{
 		std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
@@ -55,12 +55,12 @@ void ToolsImplementation::StopWorkerThread()
 	}
 
 	if (_uinputInitialized) {
-		ShutdownUinputDevice();
+		shutdownUinputDevice();
 		_uinputInitialized = false;
 	}
 }
 
-bool ToolsImplementation::InitializeUinputDevice()
+bool ToolsImplementation::initializeUinputDevice()
 {
 	if (_uinputFd >= 0) {
 		return true;
@@ -68,7 +68,7 @@ bool ToolsImplementation::InitializeUinputDevice()
 
 	int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
 	if (fd < 0) {
-		LOGERR("ToolsImplementation::InitializeUinputDevice open(/dev/uinput) failed: %s", strerror(errno));
+		LOGERR("ToolsImplementation::initializeUinputDevice open(/dev/uinput) failed: %s", strerror(errno));
 		return false;
 	}
 
@@ -101,7 +101,7 @@ bool ToolsImplementation::InitializeUinputDevice()
 	}
 
 	if (!success) {
-		LOGERR("ToolsImplementation::InitializeUinputDevice setup failed: %s", strerror(errno));
+		LOGERR("ToolsImplementation::initializeUinputDevice setup failed: %s", strerror(errno));
 		close(fd);
 		return false;
 	}
@@ -110,7 +110,7 @@ bool ToolsImplementation::InitializeUinputDevice()
 	return true;
 }
 
-void ToolsImplementation::ShutdownUinputDevice()
+void ToolsImplementation::shutdownUinputDevice()
 {
 	if (_uinputFd >= 0) {
 		ioctl(_uinputFd, UI_DEV_DESTROY);
@@ -119,7 +119,7 @@ void ToolsImplementation::ShutdownUinputDevice()
 	}
 }
 
-bool ToolsImplementation::SendKeyEvent(const uint32_t keyCode, const bool pressed)
+bool ToolsImplementation::sendKeyEvent(const uint32_t keyCode, const bool pressed)
 {
 	if (_uinputFd < 0) {
 		return false;
@@ -133,7 +133,7 @@ bool ToolsImplementation::SendKeyEvent(const uint32_t keyCode, const bool presse
 	event.value = pressed ? 1 : 0;
 
 	if (write(_uinputFd, &event, sizeof(event)) != sizeof(event)) {
-		LOGERR("ToolsImplementation::SendKeyEvent failed to write key event: %s", strerror(errno));
+		LOGERR("ToolsImplementation::sendKeyEvent failed to write key event: %s", strerror(errno));
 		return false;
 	}
 
@@ -141,14 +141,14 @@ bool ToolsImplementation::SendKeyEvent(const uint32_t keyCode, const bool presse
 	event.code = SYN_REPORT;
 	event.value = 0;
 	if (write(_uinputFd, &event, sizeof(event)) != sizeof(event)) {
-		LOGERR("ToolsImplementation::SendKeyEvent failed to write sync event: %s", strerror(errno));
+		LOGERR("ToolsImplementation::sendKeyEvent failed to write sync event: %s", strerror(errno));
 		return false;
 	}
 
 	return true;
 }
 
-uint32_t ToolsImplementation::ModifierToLinuxKeyCode(const string& modifier) const
+uint32_t ToolsImplementation::modifierToLinuxKeyCode(const string& modifier) const
 {
 	if (modifier == "ctrl") {
 		return KEY_LEFTCTRL;
@@ -163,32 +163,32 @@ uint32_t ToolsImplementation::ModifierToLinuxKeyCode(const string& modifier) con
 	return KEY_RESERVED;
 }
 
-void ToolsImplementation::DispatchQueuedKeyEvent(const QueuedKeyEvent& keyEvent)
+void ToolsImplementation::dispatchQueuedKeyEvent(const QueuedKeyEvent& keyEvent)
 {
 	if ((_uinputInitialized == false) || (_uinputFd < 0)) {
-		LOGERR("ToolsImplementation::DispatchQueuedKeyEvent uinput is not initialized");
+		LOGERR("ToolsImplementation::dispatchQueuedKeyEvent uinput is not initialized");
 		return;
 	}
 
 	for (const auto& modifier : keyEvent.modifiers) {
-		const uint32_t modifierCode = ModifierToLinuxKeyCode(modifier);
+		const uint32_t modifierCode = modifierToLinuxKeyCode(modifier);
 		if (modifierCode != KEY_RESERVED) {
-			SendKeyEvent(modifierCode, true);
+			sendKeyEvent(modifierCode, true);
 		}
 	}
 
-	SendKeyEvent(keyEvent.keyCode, true);
+	sendKeyEvent(keyEvent.keyCode, true);
 
 	if (keyEvent.durationMs > 0) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(keyEvent.durationMs));
 	}
 
-	SendKeyEvent(keyEvent.keyCode, false);
+	sendKeyEvent(keyEvent.keyCode, false);
 
 	for (auto it = keyEvent.modifiers.rbegin(); it != keyEvent.modifiers.rend(); ++it) {
-		const uint32_t modifierCode = ModifierToLinuxKeyCode(*it);
+		const uint32_t modifierCode = modifierToLinuxKeyCode(*it);
 		if (modifierCode != KEY_RESERVED) {
-			SendKeyEvent(modifierCode, false);
+			sendKeyEvent(modifierCode, false);
 		}
 	}
 }
@@ -224,7 +224,7 @@ void ToolsImplementation::threadSendKeyEvent()
 		}
 
 		LOGINFO("Processing queued key event keyCode:%u modifiers:%zu delayMs:%u durationMs:%u", keyEvent.keyCode, keyEvent.modifiers.size(), keyEvent.delayMs, keyEvent.durationMs);
-		DispatchQueuedKeyEvent(keyEvent);
+		dispatchQueuedKeyEvent(keyEvent);
 	}
 }
 
@@ -245,7 +245,7 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 	}
 
 	if (_uinputInitialized == false) {
-		if (InitializeUinputDevice() == false) {
+		if (initializeUinputDevice() == false) {
 			LOGERR("ToolsImplementation::Configure failed to initialize uinput device");
 			return Core::ERROR_GENERAL;
 		}
@@ -253,7 +253,7 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 	}
 
 	if (_sendKeyThread.joinable()) {
-		StopWorkerThread();
+		stopWorkerThread();
 	}
 
 	{

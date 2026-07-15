@@ -25,12 +25,12 @@ private:
 	ToolsImplementation(const ToolsImplementation&) = delete;
 	ToolsImplementation& operator=(const ToolsImplementation&) = delete;
 
-	uint32_t ModifierToLinuxKeyCode(const string& modifier) const;
-	void DispatchQueuedKeyEvent(const QueuedKeyEvent& keyEvent);
-	bool InitializeUinputDevice();
-	void ShutdownUinputDevice();
-	bool SendKeyEvent(const uint32_t keyCode, const bool pressed);
-	void StopWorkerThread();
+	uint32_t modifierToLinuxKeyCode(const string& modifier) const;
+	void dispatchQueuedKeyEvent(const QueuedKeyEvent& keyEvent);
+	bool initializeUinputDevice();
+	void shutdownUinputDevice();
+	bool sendKeyEvent(const uint32_t keyCode, const bool pressed);
+	void stopWorkerThread();
 	void threadSendKeyEvent();
 
 public:
