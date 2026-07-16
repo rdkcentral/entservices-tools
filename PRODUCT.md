@@ -10,6 +10,8 @@ EntServices Tools provides controlled utility capabilities through Thunder, with
 
 The implemented API receives a JSON payload describing one or more key sequences and enqueues them for asynchronous dispatch into Linux input.
 
+For COMRPC compatibility, `keys` can be provided as a string that contains the JSON array of key entries.
+
 Supported value types today:
 
 - `keyCode`: Linux input key code list
@@ -17,7 +19,20 @@ Supported value types today:
 - `delay`: seconds before dispatch
 - `duration` (optional): seconds between key down and key up
 
-Example payload:
+Example JSONRPC payload (COMRPC-friendly):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "org.rdk.Tools.generateKey",
+  "params": {
+    "keys": "[{\"keyCode\":[28],\"modifiers\":[[]],\"delay\":0,\"duration\":0}]"
+  }
+}
+```
+
+Equivalent key entry content:
 
 ```json
 {
@@ -34,7 +49,11 @@ Example payload:
 
 ## Validation Rules
 
-- Root object must contain `keys` array.
+- Input must resolve to a non-empty keys array.
+- Supported inputs:
+  - JSON object with `keys` array
+  - JSON object with `keys` string containing array JSON
+  - Raw array JSON string
 - Each entry must contain `keyCode`, `modifiers`, and `delay`.
 - `keyCode` and `modifiers` arrays must have equal lengths.
 - Allowed modifiers are only `ctrl`, `alt`, and `shift`.

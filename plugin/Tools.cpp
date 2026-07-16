@@ -65,7 +65,7 @@ namespace WPEFramework
             {
                 _Tools->Configure(service);
                 Exchange::JTools::Register(*this, _Tools);
-                LOGINFO("HdmiCecSource plugin is available. Successfully activated Tools Plugin");
+                LOGINFO("Tools plugin is available. Successfully activated Tools Plugin");
             }
             else
             {

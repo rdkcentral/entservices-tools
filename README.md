@@ -30,6 +30,28 @@ Build includes:
 - Shared implementation library (`${NAMESPACE}ToolsImplementation`)
 - Generated plugin config from `plugin/Tools.conf.in` and `plugin/Tools.config`
 
+## API Payload Format
+
+`GenerateKey` accepts key entries as a JSON array represented as a string, which is compatible with COMRPC limitations around nested arrays.
+
+Recommended request pattern:
+
+```json
+{
+	"jsonrpc": "2.0",
+	"id": 42,
+	"method": "org.rdk.Tools.generateKey",
+	"params": {
+		"keys": "[{\"keyCode\":[28],\"modifiers\":[[]],\"delay\":0,\"duration\":0}]"
+	}
+}
+```
+
+The implementation also accepts legacy payload forms for compatibility:
+
+- `keys` as a real JSON array
+- Entire input parsed directly as a JSON array string
+
 ## Runtime Configuration
 
 Configuration template is defined in:

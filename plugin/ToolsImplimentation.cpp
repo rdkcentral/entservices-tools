@@ -299,18 +299,27 @@ Core::hresult ToolsImplementation::GenerateKey(const string& keys, bool& success
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 
-	JsonObject params;
-	params.FromString(keys);
+	JsonArray keyEntries;
+	keyEntries.FromString(keys);
 
-	if (params.IsSet() == false || params.HasLabel("keys") == false) {
-		LOGERR("ToolsImplementation::GenerateKey invalid payload: expected object with 'keys' array");
-		success = false;
-		return Core::ERROR_INVALID_INPUT_LENGTH;
+	if (keyEntries.IsSet() == false) {
+		JsonObject params;
+		params.FromString(keys);
+
+		if (params.IsSet() && params.HasLabel("keys")) {
+			keyEntries = params["keys"].Array();
+
+			if (keyEntries.IsSet() == false || keyEntries.Length() == 0) {
+				const string keyEntriesString = params["keys"].String();
+				if (keyEntriesString.empty() == false) {
+					keyEntries.FromString(keyEntriesString);
+				}
+			}
+		}
 	}
 
-	JsonArray keyEntries = params["keys"].Array();
-	if (keyEntries.Length() == 0) {
-		LOGERR("ToolsImplementation::GenerateKey invalid payload: 'keys' is empty");
+	if (keyEntries.IsSet() == false || keyEntries.Length() == 0) {
+		LOGERR("ToolsImplementation::GenerateKey invalid payload: expected keys array or object containing keys array/string");
 		success = false;
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
