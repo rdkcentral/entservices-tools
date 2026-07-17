@@ -282,8 +282,8 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
  *
  * Expected payload format:
  * - keys: array of key entry objects
- * - keyCode: array of Linux key codes
- * - modifiers: array of modifier arrays (ctrl, alt, shift)
+ * - keyCode: integer representing the Linux key code
+ * - modifiers: array of modifiers (ctrl, alt, shift)
  * - delay: seconds before each key event dispatch
  * - duration: optional seconds between key down and key up
  *
@@ -333,24 +333,13 @@ Core::hresult ToolsImplementation::GenerateKey(const string& keys, bool& success
 			return Core::ERROR_INVALID_INPUT_LENGTH;
 		}
 
-		JsonArray keyCodeList = entry["keyCode"].Array();
 		JsonArray modifiersList = entry["modifiers"].Array();
-
-		if (keyCodeList.Length() == 0 || modifiersList.Length() != keyCodeList.Length()) {
-			LOGERR("ToolsImplementation::GenerateKey invalid key/modifier array lengths at index %u", i);
-			success = false;
-			return Core::ERROR_INVALID_INPUT_LENGTH;
-		}
-
 		for (uint32_t j = 0; j < modifiersList.Length(); ++j) {
-			JsonArray oneKeyModifiers = modifiersList[j].Array();
-			for (uint32_t k = 0; k < oneKeyModifiers.Length(); ++k) {
-				const string modifier = oneKeyModifiers[k].String();
-				if ((modifier != "ctrl") && (modifier != "alt") && (modifier != "shift")) {
-					LOGERR("ToolsImplementation::GenerateKey invalid modifier '%s' at key index %u", modifier.c_str(), j);
-					success = false;
-					return Core::ERROR_INVALID_INPUT_LENGTH;
-				}
+			const string modifier = modifiersList[j].String();
+			if ((modifier != "ctrl") && (modifier != "alt") && (modifier != "shift")) {
+				LOGERR("ToolsImplementation::GenerateKey invalid modifier '%s' at entry %u", modifier.c_str(), i);
+				success = false;
+				return Core::ERROR_INVALID_INPUT_LENGTH;
 			}
 		}
 
@@ -371,33 +360,30 @@ Core::hresult ToolsImplementation::GenerateKey(const string& keys, bool& success
 			}
 		}
 
-		for (uint32_t j = 0; j < keyCodeList.Length(); ++j) {
-			const double keyCodeNumber = keyCodeList[j].Number();
-			if (std::floor(keyCodeNumber) != keyCodeNumber) {
-				LOGERR("ToolsImplementation::GenerateKey non-discrete linux keyCode '%f' at entry %u index %u", keyCodeNumber, i, j);
-				success = false;
-				return Core::ERROR_INVALID_INPUT_LENGTH;
-			}
-			if ((keyCodeNumber < 0) || (keyCodeNumber > KEY_MAX)) {
-				LOGERR("ToolsImplementation::GenerateKey invalid linux keyCode '%f' at entry %u index %u", keyCodeNumber, i, j);
-				success = false;
-				return Core::ERROR_INVALID_INPUT_LENGTH;
-			}
-
-			QueuedKeyEvent keyEvent;
-			keyEvent.keyCode = static_cast<uint32_t>(keyCodeNumber);
-			keyEvent.delayMs = static_cast<uint32_t>(delay * 1000);
-			keyEvent.durationMs = static_cast<uint32_t>(duration * 1000);
-
-			JsonArray oneKeyModifiers = modifiersList[j].Array();
-			for (uint32_t k = 0; k < oneKeyModifiers.Length(); ++k) {
-				keyEvent.modifiers.push_back(oneKeyModifiers[k].String());
-			}
-
-			std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
-			_sendKeyQueue.push(keyEvent);
-			_sendKeyThreadRun = true;
+		const double keyCodeNumber = entry["keyCode"].Number();
+		if (std::floor(keyCodeNumber) != keyCodeNumber) {
+			LOGERR("ToolsImplementation::GenerateKey non-discrete linux keyCode '%f' at entry %u", keyCodeNumber, i);
+			success = false;
+			return Core::ERROR_INVALID_INPUT_LENGTH;
 		}
+		if ((keyCodeNumber < 0) || (keyCodeNumber > KEY_MAX)) {
+			LOGERR("ToolsImplementation::GenerateKey invalid linux keyCode '%f' at entry %u", keyCodeNumber, i);
+			success = false;
+			return Core::ERROR_INVALID_INPUT_LENGTH;
+		}
+
+		QueuedKeyEvent keyEvent;
+		keyEvent.keyCode = static_cast<uint32_t>(keyCodeNumber);
+		keyEvent.delayMs = static_cast<uint32_t>(delay * 1000);
+		keyEvent.durationMs = static_cast<uint32_t>(duration * 1000);
+
+		for (uint32_t j = 0; j < modifiersList.Length(); ++j) {
+			keyEvent.modifiers.push_back(modifiersList[j].String());
+		}
+
+		std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
+		_sendKeyQueue.push(keyEvent);
+		_sendKeyThreadRun = true;
 	}
 	_sendKeyCv.notify_one();
 

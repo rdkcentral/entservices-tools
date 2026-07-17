@@ -6,7 +6,7 @@ WPEFramework (Thunder) plugin that exposes device tool operations through JSON-R
 
 - Plugin name: `Tools`
 - Callsign: `org.rdk.Tools`
-- Autostart: `false`
+- Autostart: `true`
 - Primary implemented capability: generate Linux key events through a queued worker thread
 
 ## Repository Layout
