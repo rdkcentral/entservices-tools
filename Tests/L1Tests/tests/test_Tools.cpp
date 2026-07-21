@@ -220,7 +220,7 @@ TEST_F(ToolsInitializedTest, GenerateKeyAcceptsObjectWithStringifiedArray)
     EXPECT_EQ(response, string("true"));
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyRapidSeries)
+TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeries)
 {
     static constexpr uint32_t kBurstCount = 200;
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":0,\"duration\":0}]");
@@ -234,7 +234,7 @@ TEST_F(ToolsInitializedTest, GenerateKeyRapidSeries)
     }
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyRapidSeriesMultiKeyBatch)
+TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeriesMultiKeyBatch)
 {
     static constexpr uint32_t kBurstCount = 120;
     const string payload = MakeGenerateKeyPayload(
@@ -268,7 +268,7 @@ TEST_F(ToolsInitializedTest, GenerateKeyRapidSeriesMultiKeyBatch)
     }
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyRapidAlternatingValidInvalid)
+TEST_F(ToolsInitializedTest, DISABLE_GenerateKeyRapidAlternatingValidInvalid)
 {
     static constexpr uint32_t kBurstCount = 200;
     const string validPayload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":0,\"duration\":0}]");

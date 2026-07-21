@@ -294,56 +294,96 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 Core::hresult ToolsImplementation::GenerateKey(const string& keys, bool& success)
 {
 	LOGERR("%s: Enter", __FUNCTION__);
+	auto payloadPreview = [&keys]() -> string {
+		static constexpr size_t kMaxPreviewLength = 256;
+		if (keys.length() <= kMaxPreviewLength) {
+			return keys;
+		}
+		return keys.substr(0, kMaxPreviewLength) + "...(truncated)";
+	};
+
 	if (keys.empty()) {
+		LOGERR("ToolsImplementation::GenerateKey rejected empty payload");
 		success = false;
 		return Core::ERROR_NONE;
 	}
 
 	JsonArray keyEntries;
 	keyEntries.FromString(keys);
+	if (keyEntries.IsSet()) {
+		LOGINFO("ToolsImplementation::GenerateKey payload parsed as direct array with %u entries", keyEntries.Length());
+	}
 
 	if (keyEntries.IsSet() == false) {
 		JsonObject params;
 		params.FromString(keys);
+		if (params.IsSet()) {
+			LOGINFO("ToolsImplementation::GenerateKey payload parsed as object");
+		}
 
 		if (params.IsSet() && params.HasLabel("keys")) {
 			keyEntries = params["keys"].Array();
+			if (keyEntries.IsSet()) {
+				LOGINFO("ToolsImplementation::GenerateKey extracted keys as array with %u entries", keyEntries.Length());
+			}
 
 			if (keyEntries.IsSet() == false || keyEntries.Length() == 0) {
 				const string keyEntriesString = params["keys"].String();
+				LOGINFO("ToolsImplementation::GenerateKey attempting to parse keys string; length=%u", static_cast<uint32_t>(keyEntriesString.length()));
 				if (keyEntriesString.empty() == false) {
 					keyEntries.FromString(keyEntriesString);
+					if (keyEntries.IsSet()) {
+						LOGINFO("ToolsImplementation::GenerateKey extracted keys from string with %u entries", keyEntries.Length());
+					}
 				}
 			}
+		} else if (params.IsSet()) {
+			LOGERR("ToolsImplementation::GenerateKey object payload missing required 'keys' field. payload='%s'", payloadPreview().c_str());
 		}
 	}
 
 	if (keyEntries.IsSet() == false || keyEntries.Length() == 0) {
-		LOGERR("ToolsImplementation::GenerateKey invalid payload: expected keys array or object containing keys array/string");
+		LOGERR("ToolsImplementation::GenerateKey invalid payload: expected keys array or object containing keys array/string. payload='%s'", payloadPreview().c_str());
 		success = false;
 		return Core::ERROR_NONE;
 	}
+
+	LOGINFO("ToolsImplementation::GenerateKey validating %u key entries", keyEntries.Length());
 
 	for (uint32_t i = 0; i < keyEntries.Length(); ++i) {
 		JsonObject entry = keyEntries[i].Object();
 
 		if (entry.IsSet() == false || entry.HasLabel("keyCode") == false || entry.HasLabel("modifiers") == false || entry.HasLabel("delay") == false) {
-			LOGERR("ToolsImplementation::GenerateKey invalid key entry at index %u", i);
+			LOGERR("ToolsImplementation::GenerateKey invalid key entry at index %u (isSet=%u, hasKeyCode=%u, hasModifiers=%u, hasDelay=%u)",
+				i,
+				entry.IsSet() ? 1U : 0U,
+				entry.HasLabel("keyCode") ? 1U : 0U,
+				entry.HasLabel("modifiers") ? 1U : 0U,
+				entry.HasLabel("delay") ? 1U : 0U);
 			success = false;
 			return Core::ERROR_NONE;
 		}
 
 		JsonArray modifiersList = entry["modifiers"].Array();
 		if (modifiersList.IsSet() == false) {
-			LOGERR("ToolsImplementation::GenerateKey invalid modifiers type at entry %u", i);
+			LOGERR("ToolsImplementation::GenerateKey invalid modifiers type at entry %u; expected array", i);
 			success = false;
 			return Core::ERROR_NONE;
 		}
 
+		const double keyCodeForLog = entry["keyCode"].Number();
+		const double delayForLog = entry["delay"].Number();
+		LOGINFO("ToolsImplementation::GenerateKey entry[%u]: keyCode=%f modifiersCount=%u delay=%f hasDuration=%u",
+			i,
+			keyCodeForLog,
+			modifiersList.Length(),
+			delayForLog,
+			entry.HasLabel("duration") ? 1U : 0U);
+
 		for (uint32_t j = 0; j < modifiersList.Length(); ++j) {
 			const string modifier = modifiersList[j].String();
 			if ((modifier != "ctrl") && (modifier != "alt") && (modifier != "shift")) {
-				LOGERR("ToolsImplementation::GenerateKey invalid modifier '%s' at entry %u", modifier.c_str(), i);
+				LOGERR("ToolsImplementation::GenerateKey invalid modifier '%s' at entry %u modifierIndex=%u", modifier.c_str(), i, j);
 				success = false;
 				return Core::ERROR_NONE;
 			}
@@ -351,7 +391,7 @@ Core::hresult ToolsImplementation::GenerateKey(const string& keys, bool& success
 
 		const double delay = entry["delay"].Number();
 		if (delay < 0) {
-			LOGERR("ToolsImplementation::GenerateKey invalid delay at index %u", i);
+			LOGERR("ToolsImplementation::GenerateKey invalid delay at index %u: value=%f expected>=0", i, delay);
 			success = false;
 			return Core::ERROR_NONE;
 		}
@@ -360,7 +400,7 @@ Core::hresult ToolsImplementation::GenerateKey(const string& keys, bool& success
 		if (entry.HasLabel("duration")) {
 			duration = entry["duration"].Number();
 			if (duration < 0) {
-				LOGERR("ToolsImplementation::GenerateKey invalid duration at index %u", i);
+				LOGERR("ToolsImplementation::GenerateKey invalid duration at index %u: value=%f expected>=0", i, duration);
 				success = false;
 				return Core::ERROR_NONE;
 			}
@@ -373,7 +413,7 @@ Core::hresult ToolsImplementation::GenerateKey(const string& keys, bool& success
 			return Core::ERROR_NONE;
 		}
 		if ((keyCodeNumber < 0) || (keyCodeNumber > KEY_MAX)) {
-			LOGERR("ToolsImplementation::GenerateKey invalid linux keyCode '%f' at entry %u", keyCodeNumber, i);
+			LOGERR("ToolsImplementation::GenerateKey invalid linux keyCode '%f' at entry %u (valid range [0,%u])", keyCodeNumber, i, KEY_MAX);
 			success = false;
 			return Core::ERROR_NONE;
 		}
@@ -392,6 +432,7 @@ Core::hresult ToolsImplementation::GenerateKey(const string& keys, bool& success
 		_sendKeyThreadRun = true;
 	}
 	_sendKeyCv.notify_one();
+	LOGINFO("ToolsImplementation::GenerateKey accepted %u key entries", keyEntries.Length());
 
 	success = true;
 	return Core::ERROR_NONE;
