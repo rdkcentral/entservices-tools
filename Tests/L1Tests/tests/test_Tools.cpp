@@ -33,24 +33,9 @@ using namespace WPEFramework;
 
 namespace {
 
-std::string EscapeJsonString(const std::string& input)
-{
-    std::string escaped;
-    escaped.reserve(input.size());
-
-    for (const char character : input) {
-        if ((character == '\\') || (character == '"')) {
-            escaped.push_back('\\');
-        }
-        escaped.push_back(character);
-    }
-
-    return escaped;
-}
-
 std::string MakeGenerateKeyPayload(const std::string& keysArrayJson)
 {
-    return std::string("{\"keys\":\"") + EscapeJsonString(keysArrayJson) + "\"}";
+    return std::string("{\"keys\":") + keysArrayJson + "}";
 }
 
 void LogStep(const std::string& message)
