@@ -149,75 +149,75 @@ TEST_F(ToolsInitializedTest, RegisteredMethods)
 TEST_F(ToolsInitializedTest, GenerateKeyFailsOnEmptyInput)
 {
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), _T("{\"keys\":\"\"}"), response));
-    EXPECT_EQ(response, string("{\"success\":false}"));
+    EXPECT_EQ(response, string("false"));
 }
 
 TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnMissingKeys)
 {
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), _T("{}"), response));
-    EXPECT_EQ(response, string("{\"success\":false}"));
+    EXPECT_EQ(response, string("false"));
 }
 
 TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnMissingRequiredField)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"ctrl\"]}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
-    EXPECT_EQ(response, string("{\"success\":false}"));
+    EXPECT_EQ(response, string("false"));
 }
 
 TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnInvalidModifier)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"meta\"],\"delay\":0}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
-    EXPECT_EQ(response, string("{\"success\":false}"));
+    EXPECT_EQ(response, string("false"));
 }
 
 TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnNegativeDelay)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":-0.1}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
-    EXPECT_EQ(response, string("{\"success\":false}"));
+    EXPECT_EQ(response, string("false"));
 }
 
 TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnNegativeDuration)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":0,\"duration\":-1}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
-    EXPECT_EQ(response, string("{\"success\":false}"));
+    EXPECT_EQ(response, string("false"));
 }
 
 TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnNonIntegerKeyCode)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28.5,\"modifiers\":[],\"delay\":0}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
-    EXPECT_EQ(response, string("{\"success\":false}"));
+    EXPECT_EQ(response, string("false"));
 }
 
 TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnKeyCodeOutOfRange)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":999999,\"modifiers\":[],\"delay\":0}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
-    EXPECT_EQ(response, string("{\"success\":false}"));
+    EXPECT_EQ(response, string("false"));
 }
 
 TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyAcceptsArrayPayload)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"ctrl\",\"shift\"],\"delay\":0.01,\"duration\":0.02}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
-    EXPECT_EQ(response, string("{\"success\":true}"));
+    EXPECT_EQ(response, string("true"));
 }
 
 TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyAcceptsObjectWithArray)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":30,\"modifiers\":[\"alt\"],\"delay\":0}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
-    EXPECT_EQ(response, string("{\"success\":true}"));
+    EXPECT_EQ(response, string("true"));
 }
 
 TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyAcceptsObjectWithStringifiedArray)
 {
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), _T("{\"keys\":\"[{\\\"keyCode\\\":31,\\\"modifiers\\\":[],\\\"delay\\\":0,\\\"duration\\\":0}]\"}"), response));
-    EXPECT_EQ(response, string("{\"success\":true}"));
+    EXPECT_EQ(response, string("true"));
 }
 
 TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeries)
@@ -230,7 +230,7 @@ TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeries)
 
         SCOPED_TRACE(::testing::Message() << "Rapid series index: " << i);
         EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
-        EXPECT_EQ(response, string("{\"success\":true}"));
+        EXPECT_EQ(response, string("true"));
     }
 }
 
@@ -264,7 +264,7 @@ TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeriesMultiKeyBatch)
 
         SCOPED_TRACE(::testing::Message() << "Rapid multi-key series index: " << i);
         EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
-        EXPECT_EQ(response, string("{\"success\":true}"));
+        EXPECT_EQ(response, string("true"));
     }
 }
 
@@ -278,7 +278,7 @@ TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidAlternatingValidInvalid)
         response.clear();
 
         const string& payload = ((i % 2U) == 0U) ? validPayload : invalidPayload;
-        const string expectedResponse = ((i % 2U) == 0U) ? "{\"success\":true}" : "{\"success\":false}";
+        const string expectedResponse = ((i % 2U) == 0U) ? "true" : "false";
 
         SCOPED_TRACE(::testing::Message() << "Rapid alternating series index: " << i);
         EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
