@@ -67,6 +67,6 @@ Important fields:
 
 ## Notes
 
-- The implementation source file is currently named `ToolsImplimentation.cpp`.
+- The implementation source file is currently named `ToolsImplementation.cpp`.
 - JSON payload validation for key generation is strict and rejects malformed key, modifier, delay, and duration values.
 - Device-specific KED to Linux key mappings are documented in `PRODUCT.md` under `Key Mapping Reference`.

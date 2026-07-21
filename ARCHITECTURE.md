@@ -21,7 +21,7 @@ Thunder JSON-RPC / COM-RPC
 Tools Plugin (Tools.cpp)
         |
         v
-ToolsImplementation Service (ToolsImplimentation.cpp)
+ToolsImplementation Service (ToolsImplementation.cpp)
         |
         v
 uinput dispatcher (UINPUT_*)
@@ -46,7 +46,7 @@ Responsibilities:
 ### Implementation Layer
 
 - `plugin/ToolsImplementation.h`
-- `plugin/ToolsImplimentation.cpp`
+- `plugin/ToolsImplementation.cpp`
 
 Responsibilities:
 
