@@ -39,7 +39,7 @@ jobs:
         # Modify the key if changing the list.
         if: ${{ !env.ACT }}
         id: cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             thunder/build/Thunder
@@ -63,7 +63,7 @@ jobs:
           key: ${{ runner.os }}-${{ env.THUNDER_REF }}-${{ env.INTERFACES_REF }}-4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
       - run: pip install jsonref
@@ -101,7 +101,7 @@ jobs:
 
       - name: Checkout Thunder
         if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: rdkcentral/Thunder
           path: Thunder
@@ -109,14 +109,14 @@ jobs:
 
       - name: Checkout ThunderTools
         if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: rdkcentral/ThunderTools
           path: ThunderTools
           ref: R4.4.3
 
       - name: Checkout entservices-testframework
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
@@ -124,13 +124,13 @@ jobs:
 
       - name: Checkout entservices-tools
         if: ${{ inputs.caller_source == 'local' }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: entservices-tools
 
       - name: Checkout entservices-tools-testframework
         if: ${{ inputs.caller_source == 'testframework' }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: rdkcentral/entservices-tools
           path: entservices-tools
@@ -138,7 +138,7 @@ jobs:
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: google/googletest
           path: googletest
@@ -195,7 +195,7 @@ jobs:
 
       - name: Checkout entservices-apis
         if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: rdkcentral/entservices-apis
           path: entservices-apis
@@ -313,7 +313,7 @@ jobs:
           cmake --install build/googletest
 
       - name: Checkout entservices-helpers
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: rdkcentral/entservices-helpers
           path: entservices-helpers
