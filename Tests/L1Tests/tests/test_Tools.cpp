@@ -199,9 +199,10 @@ TEST_F(ToolsInitializedTest, GenerateKeyAcceptsObjectWithArray)
     EXPECT_EQ(response, string("true"));
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyAcceptsObjectWithStringifiedArray)
+TEST_F(ToolsInitializedTest, GenerateKeyAcceptsObjectWithArrayLiteral)
 {
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), _T("{\"keys\":\"[{\\\"keyCode\\\":31,\\\"modifiers\\\":[],\\\"delay\\\":0,\\\"duration\\\":0}]\"}"), response));
+    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":31,\"modifiers\":[],\"delay\":0,\"duration\":0}]");
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("true"));
 }
 
