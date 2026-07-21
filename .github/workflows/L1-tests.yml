@@ -120,7 +120,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: 1.0.14
+          ref: feature/RDKEMW-21355
 
       - name: Checkout entservices-tools
         if: ${{ inputs.caller_source == 'local' }}
