@@ -20,6 +20,11 @@
 cmake_minimum_required(VERSION 3.3)
 
 find_package(WPEFramework)
+include(GNUInstallDirs)
+
+if(NOT CMAKE_INSTALL_LIBDIR)
+    set(CMAKE_INSTALL_LIBDIR "lib")
+endif()
 
 option(COMCAST_CONFIG "Comcast services configuration" ON)
 if(COMCAST_CONFIG)
