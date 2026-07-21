@@ -146,7 +146,7 @@ TEST_F(ToolsInitializedTest, RegisteredMethods)
     EXPECT_EQ(Core::ERROR_NONE, existsResult);
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnEmptyInput)
+TEST_F(ToolsInitializedTest, GenerateKeyFailsOnEmptyInput)
 {
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), _T("{\"keys\":\"\"}"), response));
     EXPECT_EQ(response, string("{\"success\":false}"));
