@@ -152,75 +152,75 @@ TEST_F(ToolsInitializedTest, GenerateKeyFailsOnEmptyInput)
     EXPECT_EQ(response, string("false"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnMissingKeys)
+TEST_F(ToolsInitializedTest, GenerateKeyFailsOnMissingKeys)
 {
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), _T("{}"), response));
     EXPECT_EQ(response, string("false"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnMissingRequiredField)
+TEST_F(ToolsInitializedTest, GenerateKeyFailsOnMissingRequiredField)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"ctrl\"]}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("false"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnInvalidModifier)
+TEST_F(ToolsInitializedTest, GenerateKeyFailsOnInvalidModifier)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"meta\"],\"delay\":0}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("false"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnNegativeDelay)
+TEST_F(ToolsInitializedTest, GenerateKeyFailsOnNegativeDelay)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":-0.1}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("false"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnNegativeDuration)
+TEST_F(ToolsInitializedTest, GenerateKeyFailsOnNegativeDuration)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":0,\"duration\":-1}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("false"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnNonIntegerKeyCode)
+TEST_F(ToolsInitializedTest, GenerateKeyFailsOnNonIntegerKeyCode)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28.5,\"modifiers\":[],\"delay\":0}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("false"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyFailsOnKeyCodeOutOfRange)
+TEST_F(ToolsInitializedTest, GenerateKeyFailsOnKeyCodeOutOfRange)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":999999,\"modifiers\":[],\"delay\":0}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("false"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyAcceptsArrayPayload)
+TEST_F(ToolsInitializedTest, GenerateKeyAcceptsArrayPayload)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"ctrl\",\"shift\"],\"delay\":0.01,\"duration\":0.02}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("true"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyAcceptsObjectWithArray)
+TEST_F(ToolsInitializedTest, GenerateKeyAcceptsObjectWithArray)
 {
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":30,\"modifiers\":[\"alt\"],\"delay\":0}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("true"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyAcceptsObjectWithStringifiedArray)
+TEST_F(ToolsInitializedTest, GenerateKeyAcceptsObjectWithStringifiedArray)
 {
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), _T("{\"keys\":\"[{\\\"keyCode\\\":31,\\\"modifiers\\\":[],\\\"delay\\\":0,\\\"duration\\\":0}]\"}"), response));
     EXPECT_EQ(response, string("true"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeries)
+TEST_F(ToolsInitializedTest, GenerateKeyRapidSeries)
 {
     static constexpr uint32_t kBurstCount = 200;
     const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":0,\"duration\":0}]");
@@ -234,7 +234,7 @@ TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeries)
     }
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeriesMultiKeyBatch)
+TEST_F(ToolsInitializedTest, GenerateKeyRapidSeriesMultiKeyBatch)
 {
     static constexpr uint32_t kBurstCount = 120;
     const string payload = MakeGenerateKeyPayload(
@@ -268,7 +268,7 @@ TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeriesMultiKeyBatch)
     }
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidAlternatingValidInvalid)
+TEST_F(ToolsInitializedTest, GenerateKeyRapidAlternatingValidInvalid)
 {
     static constexpr uint32_t kBurstCount = 200;
     const string validPayload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":0,\"duration\":0}]");
