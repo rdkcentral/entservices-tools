@@ -636,6 +636,17 @@ jobs:
           &&
           ls -l /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
 
+      - name: Prepare uinput access
+        if: ${{ !env.ACT }}
+        run: |
+          sudo modprobe uinput || true
+          if [ -e /dev/uinput ]; then
+            sudo chmod 666 /dev/uinput
+            ls -l /dev/uinput
+          else
+            echo "/dev/uinput is not present on this runner"
+          fi
+
       - name: Run unit tests without valgrind
         run: >
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
