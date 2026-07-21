@@ -6,7 +6,7 @@ WPEFramework (Thunder) plugin that exposes device tool operations through JSON-R
 
 - Plugin name: `Tools`
 - Callsign: `org.rdk.Tools`
-- Autostart: `true`
+- Autostart: `false`
 - Primary implemented capability: generate Linux key events through a queued worker thread
 
 ## Repository Layout
@@ -32,7 +32,7 @@ Build includes:
 
 ## API Payload Format
 
-`GenerateKey` accepts key entries as a JSON array represented as a string, which is compatible with COMRPC limitations around nested arrays.
+`GenerateKey` accepts key entries as a JSON array represented as a string. Each key entry uses a numeric `keyCode` and a flat `modifiers` string array, which avoids COMRPC issues with nested arrays.
 
 Recommended request pattern:
 
@@ -42,7 +42,7 @@ Recommended request pattern:
 	"id": 42,
 	"method": "org.rdk.Tools.generateKey",
 	"params": {
-		"keys": "[{\"keyCode\":[28],\"modifiers\":[[]],\"delay\":0,\"duration\":0}]"
+		"keys": "[{\"keyCode\":28,\"modifiers\":[],\"delay\":0,\"duration\":0}]"
 	}
 }
 ```

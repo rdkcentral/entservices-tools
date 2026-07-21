@@ -63,9 +63,17 @@ namespace WPEFramework
 
            if(nullptr != _Tools)
             {
-                _Tools->Configure(service);
-                Exchange::JTools::Register(*this, _Tools);
-                LOGINFO("Tools plugin is available. Successfully activated Tools Plugin");
+                const Core::hresult configureResult = _Tools->Configure(service);
+                if (configureResult == Core::ERROR_NONE) {
+                    Exchange::JTools::Register(*this, _Tools);
+                    LOGINFO("Tools plugin is available. Successfully activated Tools Plugin");
+                } else {
+                    msg = "Tools plugin configuration failed";
+                    _Tools->Release();
+                    _Tools = nullptr;
+                    _connectionId = 0;
+                    LOGERR("Tools plugin configuration failed with error %u", configureResult);
+                }
             }
             else
             {

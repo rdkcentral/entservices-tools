@@ -254,16 +254,16 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 		return Core::ERROR_GENERAL;
 	}
 
+	if (_sendKeyThread.joinable()) {
+		stopWorkerThread();
+	}
+
 	if (_uinputInitialized == false) {
 		if (initializeUinputDevice() == false) {
 			LOGERR("ToolsImplementation::Configure failed to initialize uinput device");
 			return Core::ERROR_GENERAL;
 		}
 		_uinputInitialized = true;
-	}
-
-	if (_sendKeyThread.joinable()) {
-		stopWorkerThread();
 	}
 
 	{
@@ -334,6 +334,12 @@ Core::hresult ToolsImplementation::GenerateKey(const string& keys, bool& success
 		}
 
 		JsonArray modifiersList = entry["modifiers"].Array();
+		if (modifiersList.IsSet() == false) {
+			LOGERR("ToolsImplementation::GenerateKey invalid modifiers type at entry %u", i);
+			success = false;
+			return Core::ERROR_INVALID_INPUT_LENGTH;
+		}
+
 		for (uint32_t j = 0; j < modifiersList.Length(); ++j) {
 			const string modifier = modifiersList[j].String();
 			if ((modifier != "ctrl") && (modifier != "alt") && (modifier != "shift")) {
