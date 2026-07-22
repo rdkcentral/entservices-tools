@@ -239,6 +239,8 @@ jobs:
           rdk/ds/frontPanelIndicator.hpp
           rdk/ds/frontPanelConfig.hpp
           rdk/ds/frontPanelTextDisplay.hpp
+          rdk/ds/AudioStereoMode.hpp
+          rdk/ds/VideoDFC.hpp
           rdk/ds/audioOutputPortType.hpp
           rdk/ds/audioOutputPortConfig.hpp
           rdk/ds/pixelResolution.hpp
