@@ -20,7 +20,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include "L2Tests.h"
 #include "L2TestsMock.h"
 
 #include <interfaces/ITools.h>
