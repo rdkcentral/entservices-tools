@@ -123,6 +123,12 @@ protected:
     }
 };
 
+TEST_F(ToolsTest, InformationReturnsExpectedString)
+{
+    const string info = plugin->Information();
+    EXPECT_EQ(info, string("This tools plugin provides external tools access to the device. It is a proxy to the ToolsImplementation plugin."));
+}
+
 TEST_F(ToolsInitializedTest, RegisteredMethods)
 {
     LogStep("RegisteredMethods: checking handler.Exists(generateKey)");
@@ -159,28 +165,28 @@ TEST_F(ToolsInitializedTest, GenerateKeyFailsOnInvalidModifier)
 
 TEST_F(ToolsInitializedTest, GenerateKeyFailsOnNegativeDelay)
 {
-    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":-0.1}]");
+    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"ctrl\"],\"delay\":-1}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("false"));
 }
 
 TEST_F(ToolsInitializedTest, GenerateKeyFailsOnNegativeDuration)
 {
-    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":0,\"duration\":-1}]");
+    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":-1}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("false"));
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyFailsOnInvalidModifierInEntry)
+TEST_F(ToolsInitializedTest, GenerateKeyFailsOnEmptyKeysArray)
 {
-    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"meta\"],\"delay\":0}]");
+    const string payload = MakeGenerateKeyPayload("[]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("false"));
 }
 
 TEST_F(ToolsInitializedTest, GenerateKeyFailsOnKeyCodeOutOfRange)
 {
-    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":999999,\"modifiers\":[],\"delay\":0}]");
+    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":999999,\"modifiers\":[\"ctrl\"],\"delay\":0}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("false"));
 }
