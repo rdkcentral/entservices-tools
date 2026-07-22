@@ -201,15 +201,15 @@ TEST_F(ToolsInitializedTest, GenerateKeyAcceptsObjectWithArray)
 
 TEST_F(ToolsInitializedTest, GenerateKeyAcceptsObjectWithArrayLiteral)
 {
-    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":31,\"modifiers\":[],\"delay\":0,\"duration\":0}]");
+    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":31,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("true"));
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeries)
+TEST_F(ToolsInitializedTest, GenerateKeyRapidSeries)
 {
     static constexpr uint32_t kBurstCount = 200;
-    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":0,\"duration\":0}]");
+    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0}]");
 
     for (uint32_t i = 0; i < kBurstCount; ++i) {
         response.clear();
@@ -220,29 +220,29 @@ TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeries)
     }
 }
 
-TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeriesMultiKeyBatch)
+TEST_F(ToolsInitializedTest, GenerateKeyRapidSeriesMultiKeyBatch)
 {
     static constexpr uint32_t kBurstCount = 120;
     const string payload = MakeGenerateKeyPayload(
         "[{\"keyCode\":28,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0},"
         "{\"keyCode\":30,\"modifiers\":[\"shift\"],\"delay\":0,\"duration\":0},"
-        "{\"keyCode\":31,\"modifiers\":[],\"delay\":0,\"duration\":0},"
+        "{\"keyCode\":31,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0},"
         "{\"keyCode\":32,\"modifiers\":[\"alt\"],\"delay\":0,\"duration\":0},"
-        "{\"keyCode\":33,\"modifiers\":[],\"delay\":0,\"duration\":0},"
+        "{\"keyCode\":33,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0},"
         "{\"keyCode\":34,\"modifiers\":[\"ctrl\",\"shift\"],\"delay\":0,\"duration\":0},"
-        "{\"keyCode\":35,\"modifiers\":[],\"delay\":0,\"duration\":0},"
+        "{\"keyCode\":35,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0},"
         "{\"keyCode\":36,\"modifiers\":[\"alt\"],\"delay\":0,\"duration\":0},"
-        "{\"keyCode\":37,\"modifiers\":[],\"delay\":0,\"duration\":0},"
+        "{\"keyCode\":37,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0},"
         "{\"keyCode\":38,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0},"
-        "{\"keyCode\":39,\"modifiers\":[],\"delay\":0,\"duration\":0},"
+        "{\"keyCode\":39,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0},"
         "{\"keyCode\":40,\"modifiers\":[\"shift\"],\"delay\":0,\"duration\":0},"
-        "{\"keyCode\":41,\"modifiers\":[],\"delay\":0,\"duration\":0},"
+        "{\"keyCode\":41,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0},"
         "{\"keyCode\":42,\"modifiers\":[\"alt\"],\"delay\":0,\"duration\":0},"
-        "{\"keyCode\":43,\"modifiers\":[],\"delay\":0,\"duration\":0},"
+        "{\"keyCode\":43,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0},"
         "{\"keyCode\":44,\"modifiers\":[\"ctrl\",\"alt\"],\"delay\":0,\"duration\":0},"
-        "{\"keyCode\":45,\"modifiers\":[],\"delay\":0,\"duration\":0},"
+        "{\"keyCode\":45,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0},"
         "{\"keyCode\":46,\"modifiers\":[\"shift\"],\"delay\":0,\"duration\":0},"
-        "{\"keyCode\":47,\"modifiers\":[],\"delay\":0,\"duration\":0},"
+        "{\"keyCode\":47,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0},"
         "{\"keyCode\":48,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0}]");
 
     for (uint32_t i = 0; i < kBurstCount; ++i) {
@@ -254,11 +254,11 @@ TEST_F(ToolsInitializedTest, DISABLED_GenerateKeyRapidSeriesMultiKeyBatch)
     }
 }
 
-TEST_F(ToolsInitializedTest, DISABLE_GenerateKeyRapidAlternatingValidInvalid)
+TEST_F(ToolsInitializedTest, GenerateKeyRapidAlternatingValidInvalid)
 {
     static constexpr uint32_t kBurstCount = 200;
-    const string validPayload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[],\"delay\":0,\"duration\":0}]");
-    const string invalidPayload = MakeGenerateKeyPayload("[{\"keyCode\":28.5,\"modifiers\":[],\"delay\":0}]");
+    const string validPayload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0}]");
+    const string invalidPayload = MakeGenerateKeyPayload("[{\"keyCode\":28.5,\"modifiers\":[\"ctrl\"],\"delay\":0}]");
 
     for (uint32_t i = 0; i < kBurstCount; ++i) {
         response.clear();
