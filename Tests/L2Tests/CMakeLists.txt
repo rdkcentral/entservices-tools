@@ -58,6 +58,14 @@ endif (MOCKACCESSOR_LIBRARIES)
 
 target_include_directories(
     ${MODULE_NAME} PRIVATE ./
+    ../../../entservices-testframework/Tests/headers
+    ../../../entservices-testframework/Tests/headers/audiocapturemgr
+    ../../../entservices-testframework/Tests/headers/rdk/ds
+    ../../../entservices-testframework/Tests/headers/rdk/iarmbus
+    ../../../entservices-testframework/Tests/headers/rdk/iarmmgrs-hal
+    ../../../entservices-testframework/Tests/headers/ccec/drivers
+    ../../../entservices-testframework/Tests/headers/network
+    ../../../entservices-testframework/Tests/headers/proc
     ../../../entservices-testframework/Tests/helpers
     ../../../entservices-testframework/Tests/Network
     ../../../entservices-helpers/helpers
