@@ -15,3 +15,8 @@ jobs:
     uses: ./.github/workflows/L1-tests.yml
     with:
       caller_source: local
+
+  trigger-L2:
+    uses: ./.github/workflows/L2-tests.yml
+    with:
+      caller_source: local
