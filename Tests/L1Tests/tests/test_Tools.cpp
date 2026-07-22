@@ -216,6 +216,7 @@ TEST_F(ToolsInitializedTest, GenerateKeyAcceptsEncodedObjectWithKeysArray)
 {
     // Directly invoke implementation with an object payload to target params.HasLabel("keys") branch.
     const string payload = _T("{\"keys\":[{\"keyCode\":31,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0}]}");
+    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
     bool success = false;
     EXPECT_EQ(Core::ERROR_NONE, toolsImpl->GenerateKey(payload, success));
     EXPECT_EQ(success, true);
