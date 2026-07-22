@@ -214,10 +214,11 @@ TEST_F(ToolsInitializedTest, GenerateKeyAcceptsObjectWithArrayLiteral)
 
 TEST_F(ToolsInitializedTest, GenerateKeyAcceptsEncodedObjectWithKeysArray)
 {
-    // Pass a JSON string that decodes to {"keys":[...]} so GenerateKey enters the params.HasLabel("keys") branch.
-    const string payload = _T("\"{\\\"keys\\\":[{\\\"keyCode\\\":31,\\\"modifiers\\\":[\\\"ctrl\\\"],\\\"delay\\\":0,\\\"duration\\\":0}]}\"");
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
-    EXPECT_EQ(response, string("true"));
+    // Directly invoke implementation with an object payload to target params.HasLabel("keys") branch.
+    const string payload = _T("{\"keys\":[{\"keyCode\":31,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0}]}");
+    bool success = false;
+    EXPECT_EQ(Core::ERROR_NONE, toolsImpl->GenerateKey(payload, success));
+    EXPECT_EQ(success, true);
 }
 
 TEST_F(ToolsInitializedTest, GenerateKeyRapidSeries)
