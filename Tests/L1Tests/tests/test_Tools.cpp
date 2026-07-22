@@ -171,9 +171,9 @@ TEST_F(ToolsInitializedTest, GenerateKeyFailsOnNegativeDuration)
     EXPECT_EQ(response, string("false"));
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyFailsOnNonIntegerKeyCode)
+TEST_F(ToolsInitializedTest, GenerateKeyFailsOnInvalidModifierInEntry)
 {
-    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28.5,\"modifiers\":[],\"delay\":0}]");
+    const string payload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"meta\"],\"delay\":0}]");
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKey"), payload, response));
     EXPECT_EQ(response, string("false"));
 }
@@ -258,7 +258,7 @@ TEST_F(ToolsInitializedTest, GenerateKeyRapidAlternatingValidInvalid)
 {
     static constexpr uint32_t kBurstCount = 200;
     const string validPayload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"ctrl\"],\"delay\":0,\"duration\":0}]");
-    const string invalidPayload = MakeGenerateKeyPayload("[{\"keyCode\":28.5,\"modifiers\":[\"ctrl\"],\"delay\":0}]");
+    const string invalidPayload = MakeGenerateKeyPayload("[{\"keyCode\":28,\"modifiers\":[\"meta\"],\"delay\":0}]");
 
     for (uint32_t i = 0; i < kBurstCount; ++i) {
         response.clear();
