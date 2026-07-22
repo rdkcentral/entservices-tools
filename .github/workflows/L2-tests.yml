@@ -62,6 +62,11 @@ jobs:
           libgrpc++-dev
           libdbus-1-dev
 
+      - name: Install GStreamer
+        run: |
+          sudo apt update
+          sudo apt install -y libunwind-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+
       - name: Load uinput kernel module
         run: sudo modprobe uinput
 
@@ -223,6 +228,9 @@ jobs:
           -DTHUNDER_VERSION=4
           -DTHUNDER_VERSION_MAJOR=4
           -DTHUNDER_VERSION_MINOR=4
+          -I /usr/include/gstreamer-1.0
+          -I /usr/include/glib-2.0
+          -I /usr/lib/x86_64-linux-gnu/glib-2.0/include
           -I $GITHUB_WORKSPACE/install/usr/include"
           &&
           cmake --build build/mocks -j8
@@ -246,6 +254,9 @@ jobs:
           -DTHUNDER_VERSION=4
           -DTHUNDER_VERSION_MAJOR=4
           -DTHUNDER_VERSION_MINOR=4
+          -I /usr/include/gstreamer-1.0
+          -I /usr/include/glib-2.0
+          -I /usr/lib/x86_64-linux-gnu/glib-2.0/include
           -I $GITHUB_WORKSPACE/install/usr/include
           -I $GITHUB_WORKSPACE/install/usr/include/WPEFramework
           -Wall -Wno-unused-result -Wno-deprecated-declarations -Wno-error=format="
@@ -277,7 +288,10 @@ jobs:
           -DTHUNDER_VERSION=4
           -DTHUNDER_VERSION_MAJOR=4
           -DTHUNDER_VERSION_MINOR=4
-          -DRDK_SERVICES_L2_TEST
+          -DRDK_SERVICE_L2_TEST
+          -I /usr/include/gstreamer-1.0
+          -I /usr/include/glib-2.0
+          -I /usr/lib/x86_64-linux-gnu/glib-2.0/include
           -I $GITHUB_WORKSPACE/install/usr/include
           -I $GITHUB_WORKSPACE/install/usr/include/WPEFramework
           -Wall -Wno-unused-result -Wno-deprecated-declarations -Wno-error=format="
