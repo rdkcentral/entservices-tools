@@ -19,6 +19,8 @@
 
 cmake_minimum_required(VERSION 3.3)
 
+project(entservices-tools LANGUAGES C CXX)
+
 find_package(WPEFramework)
 include(GNUInstallDirs)
 
@@ -42,7 +44,6 @@ if(RDK_SERVICES_L1_TEST)
 endif()
 
 if(RDK_SERVICE_L2_TEST)
-    project(entservices-tools LANGUAGES C CXX)
     add_subdirectory(Tests/L2Tests)
 endif()
 
