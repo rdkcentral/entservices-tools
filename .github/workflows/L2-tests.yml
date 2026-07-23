@@ -392,6 +392,7 @@ jobs:
           -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
           -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
           -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/install/usr"
+          -DENTSERVICES_APIS_DIR="$GITHUB_WORKSPACE/entservices-apis"
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
           -DCMAKE_CXX_FLAGS="
           -DEXCEPTIONS_ENABLE=ON
