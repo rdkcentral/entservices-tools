@@ -58,27 +58,15 @@ endif (MOCKACCESSOR_LIBRARIES)
 
 target_include_directories(
     ${MODULE_NAME} PRIVATE ./
-    ../../../entservices-testframework/Tests/headers
-    ../../../entservices-testframework/Tests/headers/audiocapturemgr
-    ../../../entservices-testframework/Tests/headers/rdk/ds
-    ../../../entservices-testframework/Tests/headers/rdk/iarmbus
-    ../../../entservices-testframework/Tests/headers/rdk/iarmmgrs-hal
-    ../../../entservices-testframework/Tests/headers/ccec/drivers
-    ../../../entservices-testframework/Tests/headers/network
-    ../../../entservices-testframework/Tests/headers/proc
-    ../../../entservices-testframework/Tests/helpers
-    ../../../entservices-testframework/Tests/Network
-    ../../../entservices-helpers/helpers
+    ${CMAKE_SOURCE_DIR}/../entservices-helpers/helpers
+    ../../helpers
     ../../../entservices-testframework/Tests/mocks
-    ../../../entservices-testframework/Tests/mocks/devicesettings
     ../../../entservices-testframework/Tests/mocks/thunder
+    ../../../entservices-testframework/Tests/mocks/devicesettings
     ../../../entservices-testframework/Tests/mocks/MockPlugin
-    ../../../entservices-testframework/Tests/mocks/civetweb
-    ../../../entservices-testframework/Tests/mocks/MockAuthService
-    ../../../entservices-testframework/Tests/mocks/MockSecManager
-    ../../../entservices-testframework/Tests/L2Tests
     ../../../entservices-testframework/Tests/L2Tests/L2TestsPlugin
     ${CMAKE_INSTALL_PREFIX}/include
     )
+
 
 install(TARGETS ${MODULE_NAME} DESTINATION lib)

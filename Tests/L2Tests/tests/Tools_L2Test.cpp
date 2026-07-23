@@ -23,7 +23,6 @@
 #include "L2Tests.h"
 #include "L2TestsMock.h"
 
-#include <com/com.h>
 #include <interfaces/ITools.h>
 
 #define TEST_LOG(x, ...)                                                                                                                             \
