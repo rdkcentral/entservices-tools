@@ -365,6 +365,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-apis/interfaces
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/L2Tests
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/iarmbus
           -I $GITHUB_WORKSPACE/install/usr/include
           -I $GITHUB_WORKSPACE/install/usr/include/WPEFramework

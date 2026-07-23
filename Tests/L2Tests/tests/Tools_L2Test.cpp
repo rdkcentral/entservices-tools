@@ -22,6 +22,8 @@
 
 #include "L2TestsMock.h"
 
+#include <com/Administrator.h>
+#include <com/Communicator.h>
 #include <interfaces/ITools.h>
 
 #define TEST_LOG(x, ...)                                                                                                                             \

@@ -58,6 +58,9 @@ endif (MOCKACCESSOR_LIBRARIES)
 
 target_include_directories(
     ${MODULE_NAME} PRIVATE ./
+    ../../../entservices-testframework/Tests/headers
+    ../../../entservices-testframework/Tests/headers/rdk/ds
+    ../../../entservices-testframework/Tests/headers/rdk/iarmbus
     ${CMAKE_SOURCE_DIR}/../entservices-helpers/helpers
     ../../helpers
     ../../../entservices-testframework/Tests/mocks
