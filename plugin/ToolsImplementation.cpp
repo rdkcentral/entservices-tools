@@ -1,7 +1,5 @@
 #include "ToolsImplementation.h"
 
-#include "UtilsJsonRpc.h"
-
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -154,6 +152,126 @@ bool ToolsImplementation::sendKeyEvent(const uint32_t keyCode, const bool presse
 	return true;
 }
 
+static uint32_t remoteKeyCodeToLinuxKeyCode(const Exchange::RemoteKeyCode keyCode)
+{
+	switch (keyCode) {
+	case Exchange::KED_MENU:
+	case Exchange::KED_GUIDE:
+		return KEY_HOME;
+	case Exchange::KED_INFO:
+		return KEY_F9;
+	case Exchange::KED_STAR:
+		return KEY_F6;
+	case Exchange::KED_TVPOWER:
+		return KEY_F1;
+	case Exchange::KED_INPUTKEY:
+		return KEY_F15;
+	case Exchange::KED_OK:
+		return KEY_OK;
+	case Exchange::KED_SELECT:
+	case Exchange::KED_ENTER:
+		return KEY_ENTER;
+	case Exchange::KED_EXIT:
+	case Exchange::KED_BACK:
+		return KEY_ESC;
+	case Exchange::KED_PERIOD:
+	case Exchange::KED_ONDEMAND:
+		return KEY_F5;
+	case Exchange::KED_PUSH_TO_TALK:
+		return KEY_F8;
+	case Exchange::KED_POWER:
+		return KEY_POWER;
+	case Exchange::KED_CHANNELUP:
+		return KEY_UP;
+	case Exchange::KED_CHANNELDOWN:
+		return KEY_DOWN;
+	case Exchange::KED_VOLUMEUP:
+		return KEY_KPPLUS;
+	case Exchange::KED_VOLUMEDOWN:
+		return KEY_KPMINUS;
+	case Exchange::KED_MUTE:
+		return KEY_KPASTERISK;
+	case Exchange::KED_DIGIT1:
+		return KEY_1;
+	case Exchange::KED_DIGIT2:
+		return KEY_2;
+	case Exchange::KED_DIGIT3:
+		return KEY_3;
+	case Exchange::KED_DIGIT4:
+		return KEY_4;
+	case Exchange::KED_DIGIT5:
+		return KEY_5;
+	case Exchange::KED_DIGIT6:
+		return KEY_6;
+	case Exchange::KED_DIGIT7:
+		return KEY_7;
+	case Exchange::KED_DIGIT8:
+		return KEY_8;
+	case Exchange::KED_DIGIT9:
+		return KEY_9;
+	case Exchange::KED_DIGIT0:
+		return KEY_0;
+	case Exchange::KED_FASTFORWARD:
+		return KEY_F12;
+	case Exchange::KED_REWIND:
+		return KEY_F10;
+	case Exchange::KED_PAUSE:
+	case Exchange::KED_PLAY:
+		return KEY_F11;
+	case Exchange::KED_STOP:
+		return KEY_S;
+	case Exchange::KED_RECORD:
+		return KEY_F7;
+	case Exchange::KED_ARROWUP:
+		return KEY_UP;
+	case Exchange::KED_ARROWDOWN:
+		return KEY_DOWN;
+	case Exchange::KED_ARROWLEFT:
+		return KEY_LEFT;
+	case Exchange::KED_ARROWRIGHT:
+		return KEY_RIGHT;
+	case Exchange::KED_PAGEUP:
+		return KEY_PAGEUP;
+	case Exchange::KED_PAGEDOWN:
+		return KEY_PAGEDOWN;
+	case Exchange::KED_LAST:
+		return KEY_L;
+	case Exchange::KED_FAVORITE:
+		return KEY_N;
+	case Exchange::KED_KEYA:
+		return KEY_INSERT;
+	case Exchange::KED_KEYB:
+		return KEY_END;
+	case Exchange::KED_KEYC:
+		return KEY_F4;
+	case Exchange::KED_KEYD:
+		return KEY_DELETE;
+	case Exchange::KED_HELP:
+		return KEY_F2;
+	case Exchange::KED_SETUP:
+		return KEY_SETUP;
+	case Exchange::KED_NEXT:
+		return KEY_NEXT;
+	case Exchange::KED_PREVIOUS:
+		return KEY_PREVIOUS;
+	case Exchange::KED_POUND:
+		return KEY_BATTERY;
+	case Exchange::KED_AUDIO:
+		return KEY_F23;
+	case Exchange::KED_CLOSED_CAPTIONING:
+		return KEY_F24;
+	case Exchange::KED_REPLAY:
+		return KEY_B;
+	case Exchange::KED_SEARCH:
+		return KEY_F3;
+	case Exchange::KED_RF_PAIR_GHOST:
+		return KEY_BLUETOOTH;
+	case Exchange::KED_UNDEFINEDKEY:
+	default:
+		return KEY_RESERVED;
+	}
+}
+
 uint32_t ToolsImplementation::modifierToLinuxKeyCode(const string& modifier) const
 {
 	LOGERR("%s: Enter", __FUNCTION__);
@@ -277,115 +395,111 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 }
  
 
-/**
- * @brief GenerateKey validates a JSON payload and enqueues Linux key events for async dispatch.
- *
- * Expected payload format:
- * - keys: array of key entry objects
- * - keyCode: integer representing the Linux key code
- * - modifiers: array of modifiers (ctrl, alt, shift)
- * - delay: seconds before each key event dispatch
- * - duration: optional seconds between key down and key up
- *
- * @param keys JSON string containing key simulation instructions.
- * @param success Output flag indicating whether the request was accepted.
- * @return Core::ERROR_NONE on success, Core::ERROR_INVALID_INPUT_LENGTH on validation error.
- */
-Core::hresult ToolsImplementation::GenerateKey(const string& keys, bool& success)
+Core::hresult ToolsImplementation::GenerateKeys(Exchange::IToolsKeyIterator* const keys, bool& success)
 {
 	LOGERR("%s: Enter", __FUNCTION__);
-	if (keys.empty()) {
+	if (keys == nullptr) {
+		LOGERR("ToolsImplementation::GenerateKeys invalid input: keys iterator is null");
 		success = false;
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 
-	JsonArray keyEntries;
-	keyEntries.FromString(keys);
-
-	if (keyEntries.IsSet() == false) {
-		JsonObject params;
-		params.FromString(keys);
-
-		if (params.IsSet() && params.HasLabel("keys")) {
-			keyEntries = params["keys"].Array();
-
-			if (keyEntries.IsSet() == false || keyEntries.Length() == 0) {
-				const string keyEntriesString = params["keys"].String();
-				if (keyEntriesString.empty() == false) {
-					keyEntries.FromString(keyEntriesString);
-				}
-			}
-		}
-	}
-
-	if (keyEntries.IsSet() == false || keyEntries.Length() == 0) {
-		LOGERR("ToolsImplementation::GenerateKey invalid payload: expected keys array or object containing keys array/string");
+	const uint32_t keyCount = keys->Length();
+	if (keyCount == 0) {
+		LOGERR("ToolsImplementation::GenerateKeys invalid input: keys iterator is empty");
 		success = false;
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 
-	for (uint32_t i = 0; i < keyEntries.Length(); ++i) {
-		JsonObject entry = keyEntries[i].Object();
+	for (uint32_t i = 0; i < keyCount; ++i) {
+		const Exchange::ToolsKey key = (*keys)[i];
 
-		if (entry.IsSet() == false || entry.HasLabel("keyCode") == false || entry.HasLabel("modifiers") == false || entry.HasLabel("delay") == false) {
-			LOGERR("ToolsImplementation::GenerateKey invalid key entry at index %u", i);
-			success = false;
-			return Core::ERROR_INVALID_INPUT_LENGTH;
-		}
-
-		JsonArray modifiersList = entry["modifiers"].Array();
-		if (modifiersList.IsSet() == false) {
-			LOGERR("ToolsImplementation::GenerateKey invalid modifiers type at entry %u", i);
-			success = false;
-			return Core::ERROR_INVALID_INPUT_LENGTH;
-		}
-
-		for (uint32_t j = 0; j < modifiersList.Length(); ++j) {
-			const string modifier = modifiersList[j].String();
-			if ((modifier != "ctrl") && (modifier != "alt") && (modifier != "shift")) {
-				LOGERR("ToolsImplementation::GenerateKey invalid modifier '%s' at entry %u", modifier.c_str(), i);
-				success = false;
-				return Core::ERROR_INVALID_INPUT_LENGTH;
-			}
-		}
-
-		const double delay = entry["delay"].Number();
-		if (delay < 0) {
-			LOGERR("ToolsImplementation::GenerateKey invalid delay at index %u", i);
-			success = false;
-			return Core::ERROR_INVALID_INPUT_LENGTH;
-		}
-
-		double duration = 0;
-		if (entry.HasLabel("duration")) {
-			duration = entry["duration"].Number();
-			if (duration < 0) {
-				LOGERR("ToolsImplementation::GenerateKey invalid duration at index %u", i);
-				success = false;
-				return Core::ERROR_INVALID_INPUT_LENGTH;
-			}
-		}
-
-		const double keyCodeNumber = entry["keyCode"].Number();
-		if (std::floor(keyCodeNumber) != keyCodeNumber) {
-			LOGERR("ToolsImplementation::GenerateKey non-discrete linux keyCode '%f' at entry %u", keyCodeNumber, i);
-			success = false;
-			return Core::ERROR_INVALID_INPUT_LENGTH;
-		}
-		if ((keyCodeNumber < 0) || (keyCodeNumber > KEY_MAX)) {
-			LOGERR("ToolsImplementation::GenerateKey invalid linux keyCode '%f' at entry %u", keyCodeNumber, i);
+		if ((key.code < 0) || (key.code > KEY_MAX)) {
+			LOGERR("ToolsImplementation::GenerateKeys invalid linux keyCode '%d' at entry %u", key.code, i);
 			success = false;
 			return Core::ERROR_INVALID_INPUT_LENGTH;
 		}
 
 		QueuedKeyEvent keyEvent;
-		keyEvent.keyCode = static_cast<uint32_t>(keyCodeNumber);
-		keyEvent.delayMs = static_cast<uint32_t>(delay * 1000);
-		keyEvent.durationMs = static_cast<uint32_t>(duration * 1000);
+		keyEvent.keyCode = static_cast<uint32_t>(key.code);
+		keyEvent.delayMs = key.delay * 1000;
+		keyEvent.durationMs = key.duration * 1000;
 
-		for (uint32_t j = 0; j < modifiersList.Length(); ++j) {
-			keyEvent.modifiers.push_back(modifiersList[j].String());
+		switch (key.modifier) {
+		case Exchange::NONE:
+			break;
+		case Exchange::CTRL:
+			keyEvent.modifiers.push_back("ctrl");
+			break;
+		case Exchange::ALT:
+			keyEvent.modifiers.push_back("alt");
+			break;
+		case Exchange::SHIFT:
+			keyEvent.modifiers.push_back("shift");
+			break;
+		case Exchange::ALT_CTRL:
+			keyEvent.modifiers.push_back("alt");
+			keyEvent.modifiers.push_back("ctrl");
+			break;
+		case Exchange::SHIFT_CTRL:
+			keyEvent.modifiers.push_back("shift");
+			keyEvent.modifiers.push_back("ctrl");
+			break;
+		case Exchange::SHIFT_ALT:
+			keyEvent.modifiers.push_back("shift");
+			keyEvent.modifiers.push_back("alt");
+			break;
+		case Exchange::SHIFT_ALT_CTRL:
+			keyEvent.modifiers.push_back("shift");
+			keyEvent.modifiers.push_back("alt");
+			keyEvent.modifiers.push_back("ctrl");
+			break;
+		default:
+			LOGERR("ToolsImplementation::GenerateKeys invalid modifier '%u' at entry %u", static_cast<uint32_t>(key.modifier), i);
+			success = false;
+			return Core::ERROR_INVALID_INPUT_LENGTH;
 		}
+
+		std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
+		_sendKeyQueue.push(keyEvent);
+		_sendKeyThreadRun = true;
+	}
+	_sendKeyCv.notify_one();
+
+	success = true;
+	return Core::ERROR_NONE;
+}
+
+Core::hresult ToolsImplementation::GenerateRemoteKeys(Exchange::IRemoteKeyIterator* const keys, bool& success)
+{
+	LOGERR("%s: Enter", __FUNCTION__);
+	if (keys == nullptr) {
+		LOGERR("ToolsImplementation::GenerateRemoteKeys invalid input: keys iterator is null");
+		success = false;
+		return Core::ERROR_INVALID_INPUT_LENGTH;
+	}
+
+	const uint32_t keyCount = keys->Length();
+	if (keyCount == 0) {
+		LOGERR("ToolsImplementation::GenerateRemoteKeys invalid input: keys iterator is empty");
+		success = false;
+		return Core::ERROR_INVALID_INPUT_LENGTH;
+	}
+
+	for (uint32_t i = 0; i < keyCount; ++i) {
+		const Exchange::RemoteKey key = (*keys)[i];
+		const uint32_t linuxKeyCode = remoteKeyCodeToLinuxKeyCode(key.code);
+
+		if (linuxKeyCode == KEY_RESERVED) {
+			LOGERR("ToolsImplementation::GenerateRemoteKeys unsupported remote key code '%u' at entry %u", static_cast<uint32_t>(key.code), i);
+			success = false;
+			return Core::ERROR_INVALID_INPUT_LENGTH;
+		}
+
+		QueuedKeyEvent keyEvent;
+		keyEvent.keyCode = linuxKeyCode;
+		keyEvent.delayMs = key.delay * 1000;
+		keyEvent.durationMs = key.duration * 1000;
 
 		std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
 		_sendKeyQueue.push(keyEvent);
