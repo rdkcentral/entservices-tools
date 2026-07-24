@@ -1,4 +1,5 @@
 #include "ToolsImplementation.h"
+#include "UtilsJsonRpc.h"
 
 #include <chrono>
 #include <cmath>
@@ -154,119 +155,110 @@ bool ToolsImplementation::sendKeyEvent(const uint32_t keyCode, const bool presse
 
 static uint32_t remoteKeyCodeToLinuxKeyCode(const Exchange::RemoteKeyCode keyCode)
 {
-	switch (keyCode) {
-	case Exchange::KED_MENU:
-	case Exchange::KED_GUIDE:
+	switch (static_cast<uint32_t>(keyCode)) {
+	case 102: // KED_MENU, KED_GUIDE
 		return KEY_HOME;
-	case Exchange::KED_INFO:
+	case 67: // KED_INFO
 		return KEY_F9;
-	case Exchange::KED_STAR:
+	case 64: // KED_STAR
 		return KEY_F6;
-	case Exchange::KED_TVPOWER:
+	case 59: // KED_TVPOWER
 		return KEY_F1;
-	case Exchange::KED_INPUTKEY:
+	case 185: // KED_INPUTKEY
 		return KEY_F15;
-	case Exchange::KED_OK:
+	case 352: // KED_OK
 		return KEY_OK;
-	case Exchange::KED_SELECT:
-	case Exchange::KED_ENTER:
+	case 28: // KED_SELECT, KED_ENTER
 		return KEY_ENTER;
-	case Exchange::KED_EXIT:
-	case Exchange::KED_BACK:
+	case 1: // KED_EXIT, KED_BACK
 		return KEY_ESC;
-	case Exchange::KED_PERIOD:
-	case Exchange::KED_ONDEMAND:
+	case 63: // KED_PERIOD, KED_ONDEMAND
 		return KEY_F5;
-	case Exchange::KED_PUSH_TO_TALK:
+	case 66: // KED_PUSH_TO_TALK
 		return KEY_F8;
-	case Exchange::KED_POWER:
+	case 116: // KED_POWER
 		return KEY_POWER;
-	case Exchange::KED_CHANNELUP:
+	case 103: // KED_CHANNELUP, KED_ARROWUP
 		return KEY_UP;
-	case Exchange::KED_CHANNELDOWN:
+	case 108: // KED_CHANNELDOWN, KED_ARROWDOWN
 		return KEY_DOWN;
-	case Exchange::KED_VOLUMEUP:
+	case 78: // KED_VOLUMEUP
 		return KEY_KPPLUS;
-	case Exchange::KED_VOLUMEDOWN:
+	case 74: // KED_VOLUMEDOWN
 		return KEY_KPMINUS;
-	case Exchange::KED_MUTE:
+	case 55: // KED_MUTE
 		return KEY_KPASTERISK;
-	case Exchange::KED_DIGIT1:
+	case 2: // KED_DIGIT1
 		return KEY_1;
-	case Exchange::KED_DIGIT2:
+	case 3: // KED_DIGIT2
 		return KEY_2;
-	case Exchange::KED_DIGIT3:
+	case 4: // KED_DIGIT3
 		return KEY_3;
-	case Exchange::KED_DIGIT4:
+	case 5: // KED_DIGIT4
 		return KEY_4;
-	case Exchange::KED_DIGIT5:
+	case 6: // KED_DIGIT5
 		return KEY_5;
-	case Exchange::KED_DIGIT6:
+	case 7: // KED_DIGIT6
 		return KEY_6;
-	case Exchange::KED_DIGIT7:
+	case 8: // KED_DIGIT7
 		return KEY_7;
-	case Exchange::KED_DIGIT8:
+	case 9: // KED_DIGIT8
 		return KEY_8;
-	case Exchange::KED_DIGIT9:
+	case 10: // KED_DIGIT9
 		return KEY_9;
-	case Exchange::KED_DIGIT0:
+	case 11: // KED_DIGIT0
 		return KEY_0;
-	case Exchange::KED_FASTFORWARD:
+	case 88: // KED_FASTFORWARD
 		return KEY_F12;
-	case Exchange::KED_REWIND:
+	case 68: // KED_REWIND
 		return KEY_F10;
-	case Exchange::KED_PAUSE:
-	case Exchange::KED_PLAY:
+	case 87: // KED_PAUSE, KED_PLAY
 		return KEY_F11;
-	case Exchange::KED_STOP:
+	case 31: // KED_STOP
 		return KEY_S;
-	case Exchange::KED_RECORD:
+	case 65: // KED_RECORD
 		return KEY_F7;
-	case Exchange::KED_ARROWUP:
-		return KEY_UP;
-	case Exchange::KED_ARROWDOWN:
-		return KEY_DOWN;
-	case Exchange::KED_ARROWLEFT:
+	case 105: // KED_ARROWLEFT
 		return KEY_LEFT;
-	case Exchange::KED_ARROWRIGHT:
+	case 106: // KED_ARROWRIGHT
 		return KEY_RIGHT;
-	case Exchange::KED_PAGEUP:
+	case 104: // KED_PAGEUP
 		return KEY_PAGEUP;
-	case Exchange::KED_PAGEDOWN:
+	case 109: // KED_PAGEDOWN
 		return KEY_PAGEDOWN;
-	case Exchange::KED_LAST:
+	case 38: // KED_LAST
 		return KEY_L;
-	case Exchange::KED_FAVORITE:
+	case 49: // KED_FAVORITE
 		return KEY_N;
-	case Exchange::KED_KEYA:
+	case 110: // KED_KEYA
 		return KEY_INSERT;
-	case Exchange::KED_KEYB:
+	case 107: // KED_KEYB
 		return KEY_END;
-	case Exchange::KED_KEYC:
+	case 62: // KED_KEYC
 		return KEY_F4;
-	case Exchange::KED_KEYD:
+	case 111: // KED_KEYD
 		return KEY_DELETE;
-	case Exchange::KED_HELP:
+	case 60: // KED_HELP
 		return KEY_F2;
-	case Exchange::KED_SETUP:
+	case 141: // KED_SETUP
 		return KEY_SETUP;
-	case Exchange::KED_NEXT:
+	case 407: // KED_NEXT
 		return KEY_NEXT;
-	case Exchange::KED_PREVIOUS:
+	case 412: // KED_PREVIOUS
 		return KEY_PREVIOUS;
-	case Exchange::KED_POUND:
+	case 236: // KED_POUND
 		return KEY_BATTERY;
-	case Exchange::KED_AUDIO:
+	case 193: // KED_AUDIO
 		return KEY_F23;
-	case Exchange::KED_CLOSED_CAPTIONING:
+	case 194: // KED_CLOSED_CAPTIONING
 		return KEY_F24;
-	case Exchange::KED_REPLAY:
+	case 48: // KED_REPLAY
 		return KEY_B;
-	case Exchange::KED_SEARCH:
+	case 61: // KED_SEARCH
 		return KEY_F3;
-	case Exchange::KED_RF_PAIR_GHOST:
+	case 237: // KED_RF_PAIR_GHOST
 		return KEY_BLUETOOTH;
-	case Exchange::KED_UNDEFINEDKEY:
+	case 240: // KED_UNDEFINEDKEY
 	default:
 		return KEY_RESERVED;
 	}
