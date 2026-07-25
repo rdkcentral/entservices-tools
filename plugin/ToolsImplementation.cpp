@@ -396,18 +396,12 @@ Core::hresult ToolsImplementation::GenerateKeys(Exchange::IToolsKeyIterator* con
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 
-	const uint32_t keyCount = keys->Length();
-	if (keyCount == 0) {
-		LOGERR("ToolsImplementation::GenerateKeys invalid input: keys iterator is empty");
-		success = false;
-		return Core::ERROR_INVALID_INPUT_LENGTH;
-	}
-
-	for (uint32_t i = 0; i < keyCount; ++i) {
-		const Exchange::ToolsKey key = (*keys)[i];
+	Exchange::ToolsKey key;
+	uint32_t index = 0;
+	while (keys->Next(key) == true) {
 
 		if ((key.code < 0) || (key.code > KEY_MAX)) {
-			LOGERR("ToolsImplementation::GenerateKeys invalid linux keyCode '%d' at entry %u", key.code, i);
+			LOGERR("ToolsImplementation::GenerateKeys invalid linux keyCode '%d' at entry %u", key.code, index);
 			success = false;
 			return Core::ERROR_INVALID_INPUT_LENGTH;
 		}
@@ -447,7 +441,7 @@ Core::hresult ToolsImplementation::GenerateKeys(Exchange::IToolsKeyIterator* con
 			keyEvent.modifiers.push_back("ctrl");
 			break;
 		default:
-			LOGERR("ToolsImplementation::GenerateKeys invalid modifier '%u' at entry %u", static_cast<uint32_t>(key.modifier), i);
+			LOGERR("ToolsImplementation::GenerateKeys invalid modifier '%u' at entry %u", static_cast<uint32_t>(key.modifier), index);
 			success = false;
 			return Core::ERROR_INVALID_INPUT_LENGTH;
 		}
@@ -455,6 +449,13 @@ Core::hresult ToolsImplementation::GenerateKeys(Exchange::IToolsKeyIterator* con
 		std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
 		_sendKeyQueue.push(keyEvent);
 		_sendKeyThreadRun = true;
+		++index;
+	}
+
+	if (index == 0) {
+		LOGERR("ToolsImplementation::GenerateKeys invalid input: keys iterator is empty");
+		success = false;
+		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 	_sendKeyCv.notify_one();
 
@@ -471,19 +472,13 @@ Core::hresult ToolsImplementation::GenerateRemoteKeys(Exchange::IRemoteKeyIterat
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 
-	const uint32_t keyCount = keys->Length();
-	if (keyCount == 0) {
-		LOGERR("ToolsImplementation::GenerateRemoteKeys invalid input: keys iterator is empty");
-		success = false;
-		return Core::ERROR_INVALID_INPUT_LENGTH;
-	}
-
-	for (uint32_t i = 0; i < keyCount; ++i) {
-		const Exchange::RemoteKey key = (*keys)[i];
+	Exchange::RemoteKey key;
+	uint32_t index = 0;
+	while (keys->Next(key) == true) {
 		const uint32_t linuxKeyCode = remoteKeyCodeToLinuxKeyCode(key.code);
 
 		if (linuxKeyCode == KEY_RESERVED) {
-			LOGERR("ToolsImplementation::GenerateRemoteKeys unsupported remote key code '%u' at entry %u", static_cast<uint32_t>(key.code), i);
+			LOGERR("ToolsImplementation::GenerateRemoteKeys unsupported remote key code '%u' at entry %u", static_cast<uint32_t>(key.code), index);
 			success = false;
 			return Core::ERROR_INVALID_INPUT_LENGTH;
 		}
@@ -496,6 +491,13 @@ Core::hresult ToolsImplementation::GenerateRemoteKeys(Exchange::IRemoteKeyIterat
 		std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
 		_sendKeyQueue.push(keyEvent);
 		_sendKeyThreadRun = true;
+		++index;
+	}
+
+	if (index == 0) {
+		LOGERR("ToolsImplementation::GenerateRemoteKeys invalid input: keys iterator is empty");
+		success = false;
+		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 	_sendKeyCv.notify_one();
 
