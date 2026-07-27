@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <atomic>
 #include <iostream>
 #include <vector>
 
@@ -45,10 +46,25 @@ public:
     explicit ToolsKeyIteratorImpl(const std::vector<Exchange::ToolsKey>& keys)
         : _keys(keys)
         , _position(0)
+        , _refCount(1)
     {
     }
 
     ~ToolsKeyIteratorImpl() override = default;
+
+    void AddRef() const override
+    {
+        ++_refCount;
+    }
+
+    uint32_t Release() const override
+    {
+        const uint32_t current = _refCount.load();
+        if (current > 0) {
+            return --_refCount;
+        }
+        return 0;
+    }
 
     bool Next(Element& info) override
     {
@@ -102,6 +118,7 @@ public:
 private:
     std::vector<Exchange::ToolsKey> _keys;
     size_t _position;
+    mutable std::atomic_uint32_t _refCount;
 };
 
 void LogStep(const std::string& message)
