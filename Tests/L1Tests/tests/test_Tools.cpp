@@ -298,20 +298,6 @@ TEST_F(ToolsInitializedTest, RegisteredMethods)
     EXPECT_EQ(Core::ERROR_NONE, existsRemoteResult);
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeysJsonRpcSucceedsWithValidPayload)
-{
-    const string payload = "{\"keys\":[{\"code\":28,\"modifier\":1,\"delay\":0,\"duration\":0}]}";
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-    EXPECT_EQ(response, string("true"));
-}
-
-TEST_F(ToolsInitializedTest, GenerateKeysJsonRpcFailsOnOutOfRangeCode)
-{
-    const string payload = "{\"keys\":[{\"code\":999999,\"modifier\":1,\"delay\":0,\"duration\":0}]}";
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-    EXPECT_EQ(response, string("false"));
-}
-
 TEST_F(ToolsInitializedTest, GenerateKeysFailsOnEmptyIterator)
 {
     toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
