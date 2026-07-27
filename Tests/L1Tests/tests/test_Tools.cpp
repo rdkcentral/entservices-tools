@@ -322,6 +322,27 @@ TEST_F(ToolsInitializedTest, GenerateKeysFailsOnInvalidModifier)
     EXPECT_EQ(false, success);
 }
 
+TEST_F(ToolsInitializedTest, GenerateKeysAcceptsAllSupportedModifiers)
+{
+    auto mappingOnlyImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+
+    std::vector<Exchange::ToolsKey> keys = {
+        { 30, Exchange::Modifier::NONE, 0, 0 },
+        { 31, Exchange::Modifier::CTRL, 0, 0 },
+        { 32, Exchange::Modifier::ALT, 0, 0 },
+        { 33, Exchange::Modifier::ALT_CTRL, 0, 0 },
+        { 34, Exchange::Modifier::SHIFT, 0, 0 },
+        { 35, Exchange::Modifier::SHIFT_CTRL, 0, 0 },
+        { 36, Exchange::Modifier::SHIFT_ALT, 0, 0 },
+        { 37, Exchange::Modifier::SHIFT_ALT_CTRL, 0, 0 }
+    };
+
+    ToolsKeyIteratorImpl iterator(keys);
+    bool success = false;
+    EXPECT_EQ(Core::ERROR_NONE, mappingOnlyImpl->GenerateKeys(&iterator, success));
+    EXPECT_EQ(true, success);
+}
+
 TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
 {
     auto configuredImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
