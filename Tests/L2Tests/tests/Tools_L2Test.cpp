@@ -20,6 +20,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+#include <algorithm>
+
 #include "L2TestsMock.h"
 
 #include <com/Administrator.h>
@@ -36,6 +38,70 @@
 
 using namespace WPEFramework;
 using ::testing::NiceMock;
+
+class ToolsKeyIteratorImpl final : public Exchange::IToolsKeyIterator {
+public:
+    explicit ToolsKeyIteratorImpl(const std::vector<Exchange::ToolsKey>& keys)
+        : _keys(keys)
+        , _position(0)
+    {
+    }
+
+    ~ToolsKeyIteratorImpl() override = default;
+
+    bool Next(Element& info) override
+    {
+        if (_position < _keys.size()) {
+            info = _keys[_position++];
+            return true;
+        }
+        return false;
+    }
+
+    bool Previous(Element& info) override
+    {
+        if (_position > 0) {
+            --_position;
+            info = _keys[_position];
+            return true;
+        }
+        return false;
+    }
+
+    void Reset(const uint32_t position) override
+    {
+        _position = std::min(static_cast<size_t>(position), _keys.size());
+    }
+
+    bool IsValid() const override
+    {
+        return (_keys.empty() == false);
+    }
+
+    uint32_t Count() const override
+    {
+        return static_cast<uint32_t>(_keys.size());
+    }
+
+    Element Current() const override
+    {
+        if (_keys.empty()) {
+            return Exchange::ToolsKey { 0, Exchange::Modifier::NONE, 0, 0 };
+        }
+        if (_position >= _keys.size()) {
+            return _keys.back();
+        }
+        return _keys[_position];
+    }
+
+    BEGIN_INTERFACE_MAP(ToolsKeyIteratorImpl)
+    INTERFACE_ENTRY(Exchange::IToolsKeyIterator)
+    END_INTERFACE_MAP
+
+private:
+    std::vector<Exchange::ToolsKey> _keys;
+    size_t _position;
+};
 
 /**
  * @brief Tools L2 test class.
@@ -129,96 +195,90 @@ uint32_t Tools_L2Test::CreateToolsInterfaceObject()
 }
 
 // ---------------------------------------------------------------------------
-// Negative-path tests — these exercise validation inside GenerateKey and do
+// Negative-path tests — these exercise validation inside GenerateKeys and do
 // not require uinput to be usable.
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Verifies that GenerateKey rejects a payload missing the required delay field.
+ * @brief Verifies that GenerateKeys rejects a null iterator.
  */
-TEST_F(Tools_L2Test, GenerateKeyFailsOnMissingRequiredField)
+TEST_F(Tools_L2Test, GenerateKeysFailsOnNullIterator)
 {
-    TEST_LOG("GenerateKeyFailsOnMissingRequiredField: start");
+    TEST_LOG("GenerateKeysFailsOnNullIterator: start");
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
     bool success = true;
-    const string payload = R"([{"keyCode":28,"modifiers":["ctrl"]}])";
-    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKey(payload, success));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateKeys(nullptr, success));
     EXPECT_EQ(false, success);
 }
 
 /**
- * @brief Verifies that GenerateKey rejects an unsupported modifier string.
+ * @brief Verifies that GenerateKeys rejects an unsupported modifier enum.
  */
-TEST_F(Tools_L2Test, GenerateKeyFailsOnInvalidModifier)
+TEST_F(Tools_L2Test, GenerateKeysFailsOnInvalidModifier)
 {
-    TEST_LOG("GenerateKeyFailsOnInvalidModifier: start");
+    TEST_LOG("GenerateKeysFailsOnInvalidModifier: start");
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
+    std::vector<Exchange::ToolsKey> keys = {
+        { 28, static_cast<Exchange::Modifier>(99), 0, 0 }
+    };
+    ToolsKeyIteratorImpl iterator(keys);
+
     bool success = true;
-    const string payload = R"([{"keyCode":28,"modifiers":["meta"],"delay":0}])";
-    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKey(payload, success));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateKeys(&iterator, success));
     EXPECT_EQ(false, success);
 }
 
 /**
- * @brief Verifies that GenerateKey rejects a keyCode beyond the Linux KEY_MAX range.
+ * @brief Verifies that GenerateKeys rejects a keyCode beyond the Linux KEY_MAX range.
  */
-TEST_F(Tools_L2Test, GenerateKeyFailsOnKeyCodeOutOfRange)
+TEST_F(Tools_L2Test, GenerateKeysFailsOnKeyCodeOutOfRange)
 {
-    TEST_LOG("GenerateKeyFailsOnKeyCodeOutOfRange: start");
+    TEST_LOG("GenerateKeysFailsOnKeyCodeOutOfRange: start");
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
+    std::vector<Exchange::ToolsKey> keys = {
+        { 999999, Exchange::Modifier::CTRL, 0, 0 }
+    };
+    ToolsKeyIteratorImpl iterator(keys);
+
     bool success = true;
-    const string payload = R"([{"keyCode":999999,"modifiers":["ctrl"],"delay":0}])";
-    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKey(payload, success));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateKeys(&iterator, success));
     EXPECT_EQ(false, success);
 }
 
 /**
- * @brief Verifies that GenerateKey rejects a negative delay value.
+ * @brief Verifies that GenerateKeys rejects an empty iterator.
  */
-TEST_F(Tools_L2Test, GenerateKeyFailsOnNegativeDelay)
+TEST_F(Tools_L2Test, GenerateKeysFailsOnEmptyIterator)
 {
-    TEST_LOG("GenerateKeyFailsOnNegativeDelay: start");
+    TEST_LOG("GenerateKeysFailsOnEmptyIterator: start");
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
+    std::vector<Exchange::ToolsKey> keys;
+    ToolsKeyIteratorImpl iterator(keys);
+
     bool success = true;
-    const string payload = R"([{"keyCode":28,"modifiers":["ctrl"],"delay":-1}])";
-    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKey(payload, success));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateKeys(&iterator, success));
     EXPECT_EQ(false, success);
 }
 
 /**
- * @brief Verifies that GenerateKey rejects a negative duration value.
+ * @brief Verifies that GenerateRemoteKeys rejects a null iterator.
  */
-TEST_F(Tools_L2Test, GenerateKeyFailsOnNegativeDuration)
+TEST_F(Tools_L2Test, GenerateRemoteKeysFailsOnNullIterator)
 {
-    TEST_LOG("GenerateKeyFailsOnNegativeDuration: start");
+    TEST_LOG("GenerateRemoteKeysFailsOnNullIterator: start");
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
     bool success = true;
-    const string payload = R"([{"keyCode":28,"modifiers":["ctrl"],"delay":0,"duration":-1}])";
-    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKey(payload, success));
-    EXPECT_EQ(false, success);
-}
-
-/**
- * @brief Verifies that GenerateKey rejects an empty payload string.
- */
-TEST_F(Tools_L2Test, GenerateKeyFailsOnEmptyPayload)
-{
-    TEST_LOG("GenerateKeyFailsOnEmptyPayload: start");
-    EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
-    ASSERT_NE(nullptr, m_toolsPlugin);
-
-    bool success = true;
-    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKey(string(""), success));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateRemoteKeys(nullptr, success));
     EXPECT_EQ(false, success);
 }
 
@@ -228,36 +288,43 @@ TEST_F(Tools_L2Test, GenerateKeyFailsOnEmptyPayload)
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Verifies that GenerateKey accepts a well-formed payload and returns success.
+ * @brief Verifies that GenerateKeys accepts a well-formed key list and returns success.
  *
  * Requires /dev/uinput to be accessible (uinput kernel module loaded).
  */
-TEST_F(Tools_L2Test, GenerateKeySucceedsWithValidPayload)
+TEST_F(Tools_L2Test, GenerateKeysSucceedsWithValidInput)
 {
-    TEST_LOG("GenerateKeySucceedsWithValidPayload: start");
+    TEST_LOG("GenerateKeysSucceedsWithValidInput: start");
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
+    std::vector<Exchange::ToolsKey> keys = {
+        { 28, Exchange::Modifier::CTRL, 0, 0 }
+    };
+    ToolsKeyIteratorImpl iterator(keys);
+
     bool success = false;
-    const string payload = R"([{"keyCode":28,"modifiers":["ctrl"],"delay":0,"duration":0}])";
-    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKey(payload, success));
+    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKeys(&iterator, success));
     EXPECT_EQ(true, success);
 }
 
 /**
- * @brief Verifies that GenerateKey enqueues a multi-key batch and returns success.
+ * @brief Verifies that GenerateKeys enqueues a multi-key batch and returns success.
  */
-TEST_F(Tools_L2Test, GenerateKeySucceedsWithMultiKeyBatch)
+TEST_F(Tools_L2Test, GenerateKeysSucceedsWithMultiKeyBatch)
 {
-    TEST_LOG("GenerateKeySucceedsWithMultiKeyBatch: start");
+    TEST_LOG("GenerateKeysSucceedsWithMultiKeyBatch: start");
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
+    std::vector<Exchange::ToolsKey> keys = {
+        { 28, Exchange::Modifier::CTRL, 0, 0 },
+        { 30, Exchange::Modifier::SHIFT, 0, 0 },
+        { 31, Exchange::Modifier::ALT, 0, 0 }
+    };
+    ToolsKeyIteratorImpl iterator(keys);
+
     bool success = false;
-    const string payload =
-        R"([{"keyCode":28,"modifiers":["ctrl"],"delay":0,"duration":0},)"
-        R"({"keyCode":30,"modifiers":["shift"],"delay":0,"duration":0},)"
-        R"({"keyCode":31,"modifiers":["alt"],"delay":0,"duration":0}])";
-    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKey(payload, success));
+    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKeys(&iterator, success));
     EXPECT_EQ(true, success);
 }
