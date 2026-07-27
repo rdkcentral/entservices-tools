@@ -383,94 +383,84 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
     auto configuredImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
     ASSERT_EQ(Core::ERROR_NONE, configuredImpl->Configure(&service));
 
-    struct RemoteKeyExpectation {
-        Exchange::RemoteKeyCode code;
-        bool shouldSucceed;
+    // Build a single batch of all supported remote keys to be validated.
+    std::vector<Exchange::RemoteKey> allKeys = {
+        { Exchange::RemoteKeyCode::KED_MENU, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_GUIDE, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_INFO, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_STAR, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_TVPOWER, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_INPUTKEY, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_OK, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_SELECT, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_ENTER, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_EXIT, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_BACK, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_PERIOD, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_PUSH_TO_TALK, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_POWER, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_CHANNELUP, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_CHANNELDOWN, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_VOLUMEUP, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_VOLUMEDOWN, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_MUTE, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_DIGIT1, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_DIGIT2, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_DIGIT3, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_DIGIT4, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_DIGIT5, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_DIGIT6, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_DIGIT7, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_DIGIT8, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_DIGIT9, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_DIGIT0, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_FASTFORWARD, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_REWIND, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_PAUSE, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_PLAY, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_STOP, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_RECORD, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_ARROWUP, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_ARROWDOWN, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_ARROWLEFT, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_ARROWRIGHT, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_PAGEUP, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_PAGEDOWN, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_LAST, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_FAVORITE, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_KEYA, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_KEYB, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_KEYC, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_KEYD, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_HELP, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_SETUP, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_NEXT, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_PREVIOUS, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_ONDEMAND, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_POUND, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_AUDIO, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_CLOSED_CAPTIONING, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_REPLAY, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_SEARCH, 0, 0 },
+        { Exchange::RemoteKeyCode::KED_RF_PAIR_GHOST, 0, 0 }
     };
 
-    const std::vector<RemoteKeyExpectation> cases = {
-        { Exchange::RemoteKeyCode::KED_MENU, true },
-        { Exchange::RemoteKeyCode::KED_GUIDE, true },
-        { Exchange::RemoteKeyCode::KED_INFO, true },
-        { Exchange::RemoteKeyCode::KED_STAR, true },
-        { Exchange::RemoteKeyCode::KED_TVPOWER, true },
-        { Exchange::RemoteKeyCode::KED_INPUTKEY, true },
-        { Exchange::RemoteKeyCode::KED_OK, true },
-        { Exchange::RemoteKeyCode::KED_SELECT, true },
-        { Exchange::RemoteKeyCode::KED_ENTER, true },
-        { Exchange::RemoteKeyCode::KED_EXIT, true },
-        { Exchange::RemoteKeyCode::KED_BACK, true },
-        { Exchange::RemoteKeyCode::KED_PERIOD, true },
-        { Exchange::RemoteKeyCode::KED_PUSH_TO_TALK, true },
-        { Exchange::RemoteKeyCode::KED_POWER, true },
-        { Exchange::RemoteKeyCode::KED_CHANNELUP, true },
-        { Exchange::RemoteKeyCode::KED_CHANNELDOWN, true },
-        { Exchange::RemoteKeyCode::KED_VOLUMEUP, true },
-        { Exchange::RemoteKeyCode::KED_VOLUMEDOWN, true },
-        { Exchange::RemoteKeyCode::KED_MUTE, true },
-        { Exchange::RemoteKeyCode::KED_DIGIT1, true },
-        { Exchange::RemoteKeyCode::KED_DIGIT2, true },
-        { Exchange::RemoteKeyCode::KED_DIGIT3, true },
-        { Exchange::RemoteKeyCode::KED_DIGIT4, true },
-        { Exchange::RemoteKeyCode::KED_DIGIT5, true },
-        { Exchange::RemoteKeyCode::KED_DIGIT6, true },
-        { Exchange::RemoteKeyCode::KED_DIGIT7, true },
-        { Exchange::RemoteKeyCode::KED_DIGIT8, true },
-        { Exchange::RemoteKeyCode::KED_DIGIT9, true },
-        { Exchange::RemoteKeyCode::KED_DIGIT0, true },
-        { Exchange::RemoteKeyCode::KED_FASTFORWARD, true },
-        { Exchange::RemoteKeyCode::KED_REWIND, true },
-        { Exchange::RemoteKeyCode::KED_PAUSE, true },
-        { Exchange::RemoteKeyCode::KED_PLAY, true },
-        { Exchange::RemoteKeyCode::KED_STOP, true },
-        { Exchange::RemoteKeyCode::KED_RECORD, true },
-        { Exchange::RemoteKeyCode::KED_ARROWUP, true },
-        { Exchange::RemoteKeyCode::KED_ARROWDOWN, true },
-        { Exchange::RemoteKeyCode::KED_ARROWLEFT, true },
-        { Exchange::RemoteKeyCode::KED_ARROWRIGHT, true },
-        { Exchange::RemoteKeyCode::KED_PAGEUP, true },
-        { Exchange::RemoteKeyCode::KED_PAGEDOWN, true },
-        { Exchange::RemoteKeyCode::KED_LAST, true },
-        { Exchange::RemoteKeyCode::KED_FAVORITE, true },
-        { Exchange::RemoteKeyCode::KED_KEYA, true },
-        { Exchange::RemoteKeyCode::KED_KEYB, true },
-        { Exchange::RemoteKeyCode::KED_KEYC, true },
-        { Exchange::RemoteKeyCode::KED_KEYD, true },
-        { Exchange::RemoteKeyCode::KED_HELP, true },
-        { Exchange::RemoteKeyCode::KED_SETUP, true },
-        { Exchange::RemoteKeyCode::KED_NEXT, true },
-        { Exchange::RemoteKeyCode::KED_PREVIOUS, true },
-        { Exchange::RemoteKeyCode::KED_ONDEMAND, true },
-        { Exchange::RemoteKeyCode::KED_POUND, true },
-        { Exchange::RemoteKeyCode::KED_AUDIO, true },
-        { Exchange::RemoteKeyCode::KED_CLOSED_CAPTIONING, true },
-        { Exchange::RemoteKeyCode::KED_REPLAY, true },
-        { Exchange::RemoteKeyCode::KED_SEARCH, true },
-        { Exchange::RemoteKeyCode::KED_RF_PAIR_GHOST, true },
-        { Exchange::RemoteKeyCode::KED_UNDEFINEDKEY, false }
+    RemoteKeyIteratorImpl iterator(allKeys);
+    bool success = false;
+    EXPECT_EQ(Core::ERROR_NONE, configuredImpl->GenerateRemoteKeys(&iterator, success));
+    EXPECT_EQ(true, success);
+
+    // Verify unsupported/default code path separately.
+    std::vector<Exchange::RemoteKey> unsupportedKeys = {
+        { Exchange::RemoteKeyCode::KED_UNDEFINEDKEY, 0, 0 }
     };
+    RemoteKeyIteratorImpl unsupportedIterator(unsupportedKeys);
+    bool unsupportedSuccess = true;
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, configuredImpl->GenerateRemoteKeys(&unsupportedIterator, unsupportedSuccess));
+    EXPECT_EQ(false, unsupportedSuccess);
 
-    for (size_t i = 0; i < cases.size(); ++i) {
-        const RemoteKeyExpectation& current = cases[i];
-        std::vector<Exchange::RemoteKey> keys = {
-            { current.code, 0, 0 }
-        };
-        RemoteKeyIteratorImpl iterator(keys);
-        bool success = false;
-        const Core::hresult result = configuredImpl->GenerateRemoteKeys(&iterator, success);
-
-        SCOPED_TRACE(::testing::Message() << "Index: " << i << ", code: " << static_cast<uint32_t>(current.code));
-        if (current.shouldSucceed) {
-            EXPECT_EQ(Core::ERROR_NONE, result);
-            EXPECT_EQ(true, success);
-        } else {
-            EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, result);
-            EXPECT_EQ(false, success);
-        }
-    }
-
-    // Wait for queued remote key events to be consumed by the worker thread.
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // Wait for all queued remote key events to be consumed by the worker thread.
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
 
 } // namespace
