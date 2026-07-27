@@ -38,7 +38,8 @@ public:
 	~ToolsImplementation() override;
 
 	Core::hresult Configure(PluginHost::IShell* service) override;
-	Core::hresult GenerateKey(const string& keys, bool& success) override;
+	Core::hresult GenerateKeys(Exchange::IToolsKeyIterator* const keys, bool& success) override;
+	Core::hresult GenerateRemoteKeys(Exchange::IRemoteKeyIterator* const keys, bool& success) override;
 
 	BEGIN_INTERFACE_MAP(ToolsImplementation)
 	INTERFACE_ENTRY(Exchange::ITools)
