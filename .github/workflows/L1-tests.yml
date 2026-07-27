@@ -199,7 +199,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-apis
           path: entservices-apis
-          ref: feature/RDKEMW-21352_Key_Generator_Final
+          ref: feature/RDKEMW-21352_Key_Generator
           run: rm -rf $GITHUB_WORKSPACE/entservices-apis/jsonrpc/DTV.json
 
       - name: Build entservices-apis
