@@ -324,13 +324,15 @@ TEST_F(ToolsInitializedTest, GenerateKeysFailsOnInvalidModifier)
 
 TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
 {
-    ASSERT_TRUE(toolsImpl.IsValid());
+    auto configuredImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    ASSERT_EQ(Core::ERROR_NONE, configuredImpl->Configure(&service));
+
     std::vector<Exchange::ToolsKey> keys = {
         { 31, Exchange::Modifier::CTRL, 0, 0 }
     };
     ToolsKeyIteratorImpl iterator(keys);
     bool success = false;
-    EXPECT_EQ(Core::ERROR_NONE, toolsImpl->GenerateKeys(&iterator, success));
+    EXPECT_EQ(Core::ERROR_NONE, configuredImpl->GenerateKeys(&iterator, success));
     EXPECT_EQ(true, success);
 
     // Allow the configured worker thread to dequeue and dispatch the queued event.
@@ -361,13 +363,15 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnUnsupportedCode)
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
 {
-    ASSERT_TRUE(toolsImpl.IsValid());
+    auto configuredImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    ASSERT_EQ(Core::ERROR_NONE, configuredImpl->Configure(&service));
+
     std::vector<Exchange::RemoteKey> keys = {
         { Exchange::RemoteKeyCode::KED_ENTER, 0, 0 }
     };
     RemoteKeyIteratorImpl iterator(keys);
     bool success = false;
-    EXPECT_EQ(Core::ERROR_NONE, toolsImpl->GenerateRemoteKeys(&iterator, success));
+    EXPECT_EQ(Core::ERROR_NONE, configuredImpl->GenerateRemoteKeys(&iterator, success));
     EXPECT_EQ(true, success);
 
     // Allow the configured worker thread to dequeue and dispatch the queued event.
@@ -376,7 +380,8 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
 {
-    ASSERT_TRUE(toolsImpl.IsValid());
+    auto configuredImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    ASSERT_EQ(Core::ERROR_NONE, configuredImpl->Configure(&service));
 
     struct RemoteKeyExpectation {
         Exchange::RemoteKeyCode code;
@@ -452,7 +457,7 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
         };
         RemoteKeyIteratorImpl iterator(keys);
         bool success = false;
-        const Core::hresult result = toolsImpl->GenerateRemoteKeys(&iterator, success);
+        const Core::hresult result = configuredImpl->GenerateRemoteKeys(&iterator, success);
 
         SCOPED_TRACE(::testing::Message() << "Index: " << i << ", code: " << static_cast<uint32_t>(current.code));
         if (current.shouldSucceed) {
