@@ -366,4 +366,95 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
     EXPECT_EQ(true, success);
 }
 
+TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
+{
+    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+
+    struct RemoteKeyExpectation {
+        Exchange::RemoteKeyCode code;
+        bool shouldSucceed;
+    };
+
+    const std::vector<RemoteKeyExpectation> cases = {
+        { Exchange::RemoteKeyCode::KED_MENU, true },
+        { Exchange::RemoteKeyCode::KED_GUIDE, true },
+        { Exchange::RemoteKeyCode::KED_INFO, true },
+        { Exchange::RemoteKeyCode::KED_STAR, true },
+        { Exchange::RemoteKeyCode::KED_TVPOWER, true },
+        { Exchange::RemoteKeyCode::KED_INPUTKEY, true },
+        { Exchange::RemoteKeyCode::KED_OK, true },
+        { Exchange::RemoteKeyCode::KED_SELECT, true },
+        { Exchange::RemoteKeyCode::KED_ENTER, true },
+        { Exchange::RemoteKeyCode::KED_EXIT, true },
+        { Exchange::RemoteKeyCode::KED_BACK, true },
+        { Exchange::RemoteKeyCode::KED_PERIOD, true },
+        { Exchange::RemoteKeyCode::KED_PUSH_TO_TALK, true },
+        { Exchange::RemoteKeyCode::KED_POWER, true },
+        { Exchange::RemoteKeyCode::KED_CHANNELUP, true },
+        { Exchange::RemoteKeyCode::KED_CHANNELDOWN, true },
+        { Exchange::RemoteKeyCode::KED_VOLUMEUP, true },
+        { Exchange::RemoteKeyCode::KED_VOLUMEDOWN, true },
+        { Exchange::RemoteKeyCode::KED_MUTE, true },
+        { Exchange::RemoteKeyCode::KED_DIGIT1, true },
+        { Exchange::RemoteKeyCode::KED_DIGIT2, true },
+        { Exchange::RemoteKeyCode::KED_DIGIT3, true },
+        { Exchange::RemoteKeyCode::KED_DIGIT4, true },
+        { Exchange::RemoteKeyCode::KED_DIGIT5, true },
+        { Exchange::RemoteKeyCode::KED_DIGIT6, true },
+        { Exchange::RemoteKeyCode::KED_DIGIT7, true },
+        { Exchange::RemoteKeyCode::KED_DIGIT8, true },
+        { Exchange::RemoteKeyCode::KED_DIGIT9, true },
+        { Exchange::RemoteKeyCode::KED_DIGIT0, true },
+        { Exchange::RemoteKeyCode::KED_FASTFORWARD, true },
+        { Exchange::RemoteKeyCode::KED_REWIND, true },
+        { Exchange::RemoteKeyCode::KED_PAUSE, true },
+        { Exchange::RemoteKeyCode::KED_PLAY, true },
+        { Exchange::RemoteKeyCode::KED_STOP, true },
+        { Exchange::RemoteKeyCode::KED_RECORD, true },
+        { Exchange::RemoteKeyCode::KED_ARROWUP, true },
+        { Exchange::RemoteKeyCode::KED_ARROWDOWN, true },
+        { Exchange::RemoteKeyCode::KED_ARROWLEFT, true },
+        { Exchange::RemoteKeyCode::KED_ARROWRIGHT, true },
+        { Exchange::RemoteKeyCode::KED_PAGEUP, true },
+        { Exchange::RemoteKeyCode::KED_PAGEDOWN, true },
+        { Exchange::RemoteKeyCode::KED_LAST, true },
+        { Exchange::RemoteKeyCode::KED_FAVORITE, true },
+        { Exchange::RemoteKeyCode::KED_KEYA, true },
+        { Exchange::RemoteKeyCode::KED_KEYB, true },
+        { Exchange::RemoteKeyCode::KED_KEYC, true },
+        { Exchange::RemoteKeyCode::KED_KEYD, true },
+        { Exchange::RemoteKeyCode::KED_HELP, true },
+        { Exchange::RemoteKeyCode::KED_SETUP, true },
+        { Exchange::RemoteKeyCode::KED_NEXT, true },
+        { Exchange::RemoteKeyCode::KED_PREVIOUS, true },
+        { Exchange::RemoteKeyCode::KED_ONDEMAND, true },
+        { Exchange::RemoteKeyCode::KED_POUND, true },
+        { Exchange::RemoteKeyCode::KED_AUDIO, true },
+        { Exchange::RemoteKeyCode::KED_CLOSED_CAPTIONING, true },
+        { Exchange::RemoteKeyCode::KED_REPLAY, true },
+        { Exchange::RemoteKeyCode::KED_SEARCH, true },
+        { Exchange::RemoteKeyCode::KED_RF_PAIR_GHOST, true },
+        { Exchange::RemoteKeyCode::KED_UNDEFINEDKEY, false }
+    };
+
+    for (size_t i = 0; i < cases.size(); ++i) {
+        const RemoteKeyExpectation& current = cases[i];
+        std::vector<Exchange::RemoteKey> keys = {
+            { current.code, 0, 0 }
+        };
+        RemoteKeyIteratorImpl iterator(keys);
+        bool success = false;
+        const Core::hresult result = toolsImpl->GenerateRemoteKeys(&iterator, success);
+
+        SCOPED_TRACE(::testing::Message() << "Index: " << i << ", code: " << static_cast<uint32_t>(current.code));
+        if (current.shouldSucceed) {
+            EXPECT_EQ(Core::ERROR_NONE, result);
+            EXPECT_EQ(true, success);
+        } else {
+            EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, result);
+            EXPECT_EQ(false, success);
+        }
+    }
+}
+
 } // namespace
