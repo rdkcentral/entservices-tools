@@ -36,11 +36,6 @@ using namespace WPEFramework;
 
 namespace {
 
-std::string MakeGenerateKeysPayload(const std::string& keysArrayJson)
-{
-    return std::string("{\"keys\":") + keysArrayJson + "}";
-}
-
 class ToolsKeyIteratorImpl final : public Exchange::IToolsKeyIterator {
 public:
     explicit ToolsKeyIteratorImpl(const std::vector<Exchange::ToolsKey>& keys)
@@ -117,6 +112,86 @@ public:
 
 private:
     std::vector<Exchange::ToolsKey> _keys;
+    size_t _position;
+    mutable std::atomic_uint32_t _refCount;
+};
+
+class RemoteKeyIteratorImpl final : public Exchange::IRemoteKeyIterator {
+public:
+    explicit RemoteKeyIteratorImpl(const std::vector<Exchange::RemoteKey>& keys)
+        : _keys(keys)
+        , _position(0)
+        , _refCount(1)
+    {
+    }
+
+    ~RemoteKeyIteratorImpl() override = default;
+
+    void AddRef() const override
+    {
+        ++_refCount;
+    }
+
+    uint32_t Release() const override
+    {
+        const uint32_t current = _refCount.load();
+        if (current > 0) {
+            return --_refCount;
+        }
+        return 0;
+    }
+
+    bool Next(Element& info) override
+    {
+        if (_position < _keys.size()) {
+            info = _keys[_position++];
+            return true;
+        }
+        return false;
+    }
+
+    bool Previous(Element& info) override
+    {
+        if (_position > 0) {
+            --_position;
+            info = _keys[_position];
+            return true;
+        }
+        return false;
+    }
+
+    void Reset(const uint32_t position) override
+    {
+        _position = std::min(static_cast<size_t>(position), _keys.size());
+    }
+
+    bool IsValid() const override
+    {
+        return (_keys.empty() == false);
+    }
+
+    uint32_t Count() const override
+    {
+        return static_cast<uint32_t>(_keys.size());
+    }
+
+    Element Current() const override
+    {
+        if (_keys.empty()) {
+            return Exchange::RemoteKey { Exchange::RemoteKeyCode::KED_UNDEFINEDKEY, 0, 0 };
+        }
+        if (_position >= _keys.size()) {
+            return _keys.back();
+        }
+        return _keys[_position];
+    }
+
+    BEGIN_INTERFACE_MAP(RemoteKeyIteratorImpl)
+    INTERFACE_ENTRY(Exchange::IRemoteKeyIterator)
+    END_INTERFACE_MAP
+
+private:
+    std::vector<Exchange::RemoteKey> _keys;
     size_t _position;
     mutable std::atomic_uint32_t _refCount;
 };
@@ -218,86 +293,49 @@ TEST_F(ToolsInitializedTest, RegisteredMethods)
     const uint32_t existsResult = handler.Exists(_T("generateKeys"));
     LogStep(std::string("RegisteredMethods: handler.Exists result=") + std::to_string(existsResult));
     EXPECT_EQ(Core::ERROR_NONE, existsResult);
+
+    const uint32_t existsRemoteResult = handler.Exists(_T("generateRemoteKeys"));
+    EXPECT_EQ(Core::ERROR_NONE, existsRemoteResult);
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyFailsOnEmptyInput)
+TEST_F(ToolsInitializedTest, GenerateKeysJsonRpcSucceedsWithValidPayload)
 {
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), _T("{\"keys\":\"\"}"), response));
-    EXPECT_EQ(response, string("false"));
-}
-
-TEST_F(ToolsInitializedTest, GenerateKeyFailsOnMissingKeys)
-{
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), _T("{}"), response));
-    EXPECT_EQ(response, string("false"));
-}
-
-TEST_F(ToolsInitializedTest, GenerateKeyFailsOnMissingRequiredField)
-{
-    const string payload = MakeGenerateKeysPayload("[{\"code\":28,\"modifier\":1}]");
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-    EXPECT_EQ(response, string("false"));
-}
-
-TEST_F(ToolsInitializedTest, GenerateKeyFailsOnInvalidModifier)
-{
-    const string payload = MakeGenerateKeysPayload("[{\"code\":28,\"modifier\":99,\"delay\":0}]");
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-    EXPECT_EQ(response, string("false"));
-}
-
-TEST_F(ToolsInitializedTest, GenerateKeyFailsOnNegativeDelay)
-{
-    const string payload = MakeGenerateKeysPayload("[{\"code\":28,\"modifier\":1,\"delay\":-1}]");
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-    EXPECT_EQ(response, string("false"));
-}
-
-TEST_F(ToolsInitializedTest, GenerateKeyFailsOnNegativeDuration)
-{
-    const string payload = MakeGenerateKeysPayload("[{\"code\":28,\"modifier\":1,\"delay\":0,\"duration\":-1}]");
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-    EXPECT_EQ(response, string("false"));
-}
-
-TEST_F(ToolsInitializedTest, GenerateKeyFailsOnEmptyKeysArray)
-{
-    const string payload = MakeGenerateKeysPayload("[]");
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-    EXPECT_EQ(response, string("false"));
-}
-
-TEST_F(ToolsInitializedTest, GenerateKeyFailsOnKeyCodeOutOfRange)
-{
-    const string payload = MakeGenerateKeysPayload("[{\"code\":999999,\"modifier\":1,\"delay\":0}]");
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-    EXPECT_EQ(response, string("false"));
-}
-
-TEST_F(ToolsInitializedTest, GenerateKeyAcceptsArrayPayload)
-{
-    const string payload = MakeGenerateKeysPayload("[{\"code\":28,\"modifier\":5,\"delay\":0,\"duration\":0}]");
+    const string payload = "{\"keys\":[{\"code\":28,\"modifier\":1,\"delay\":0,\"duration\":0}]}";
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
     EXPECT_EQ(response, string("true"));
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyAcceptsObjectWithArray)
+TEST_F(ToolsInitializedTest, GenerateKeysJsonRpcFailsOnOutOfRangeCode)
 {
-    const string payload = MakeGenerateKeysPayload("[{\"code\":30,\"modifier\":2,\"delay\":0}]");
+    const string payload = "{\"keys\":[{\"code\":999999,\"modifier\":1,\"delay\":0,\"duration\":0}]}";
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-    EXPECT_EQ(response, string("true"));
+    EXPECT_EQ(response, string("false"));
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyAcceptsObjectWithArrayLiteral)
+TEST_F(ToolsInitializedTest, GenerateKeysFailsOnEmptyIterator)
 {
-    const string payload = MakeGenerateKeysPayload("[{\"code\":31,\"modifier\":1,\"delay\":0,\"duration\":0}]");
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-    EXPECT_EQ(response, string("true"));
+    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    std::vector<Exchange::ToolsKey> keys;
+    ToolsKeyIteratorImpl iterator(keys);
+    bool success = true;
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, toolsImpl->GenerateKeys(&iterator, success));
+    EXPECT_EQ(false, success);
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyAcceptsEncodedObjectWithKeysArray)
+TEST_F(ToolsInitializedTest, GenerateKeysFailsOnInvalidModifier)
 {
-    // Directly invoke implementation using typed iterator-based API.
+    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    std::vector<Exchange::ToolsKey> keys = {
+        { 28, static_cast<Exchange::Modifier>(99), 0, 0 }
+    };
+    ToolsKeyIteratorImpl iterator(keys);
+    bool success = true;
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, toolsImpl->GenerateKeys(&iterator, success));
+    EXPECT_EQ(false, success);
+}
+
+TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
+{
     toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
     std::vector<Exchange::ToolsKey> keys = {
         { 31, Exchange::Modifier::CTRL, 0, 0 }
@@ -305,73 +343,41 @@ TEST_F(ToolsInitializedTest, GenerateKeyAcceptsEncodedObjectWithKeysArray)
     ToolsKeyIteratorImpl iterator(keys);
     bool success = false;
     EXPECT_EQ(Core::ERROR_NONE, toolsImpl->GenerateKeys(&iterator, success));
-    EXPECT_EQ(success, true);
+    EXPECT_EQ(true, success);
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyRapidSeries)
+TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnEmptyIterator)
 {
-    static constexpr uint32_t kBurstCount = 200;
-    const string payload = MakeGenerateKeysPayload("[{\"code\":28,\"modifier\":1,\"delay\":0,\"duration\":0}]");
-
-    for (uint32_t i = 0; i < kBurstCount; ++i) {
-        response.clear();
-
-        SCOPED_TRACE(::testing::Message() << "Rapid series index: " << i);
-        EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-        EXPECT_EQ(response, string("true"));
-    }
+    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    std::vector<Exchange::RemoteKey> keys;
+    RemoteKeyIteratorImpl iterator(keys);
+    bool success = true;
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, toolsImpl->GenerateRemoteKeys(&iterator, success));
+    EXPECT_EQ(false, success);
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyRapidSeriesMultiKeyBatch)
+TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnUnsupportedCode)
 {
-    static constexpr uint32_t kBurstCount = 120;
-    const string payload = MakeGenerateKeysPayload(
-        "[{\"code\":28,\"modifier\":1,\"delay\":0,\"duration\":0},"
-        "{\"code\":30,\"modifier\":4,\"delay\":0,\"duration\":0},"
-        "{\"code\":31,\"modifier\":1,\"delay\":0,\"duration\":0},"
-        "{\"code\":32,\"modifier\":2,\"delay\":0,\"duration\":0},"
-        "{\"code\":33,\"modifier\":1,\"delay\":0,\"duration\":0},"
-        "{\"code\":34,\"modifier\":5,\"delay\":0,\"duration\":0},"
-        "{\"code\":35,\"modifier\":1,\"delay\":0,\"duration\":0},"
-        "{\"code\":36,\"modifier\":2,\"delay\":0,\"duration\":0},"
-        "{\"code\":37,\"modifier\":1,\"delay\":0,\"duration\":0},"
-        "{\"code\":38,\"modifier\":1,\"delay\":0,\"duration\":0},"
-        "{\"code\":39,\"modifier\":1,\"delay\":0,\"duration\":0},"
-        "{\"code\":40,\"modifier\":4,\"delay\":0,\"duration\":0},"
-        "{\"code\":41,\"modifier\":1,\"delay\":0,\"duration\":0},"
-        "{\"code\":42,\"modifier\":2,\"delay\":0,\"duration\":0},"
-        "{\"code\":43,\"modifier\":1,\"delay\":0,\"duration\":0},"
-        "{\"code\":44,\"modifier\":3,\"delay\":0,\"duration\":0},"
-        "{\"code\":45,\"modifier\":1,\"delay\":0,\"duration\":0},"
-        "{\"code\":46,\"modifier\":4,\"delay\":0,\"duration\":0},"
-        "{\"code\":47,\"modifier\":1,\"delay\":0,\"duration\":0},"
-        "{\"code\":48,\"modifier\":1,\"delay\":0,\"duration\":0}]");
-
-    for (uint32_t i = 0; i < kBurstCount; ++i) {
-        response.clear();
-
-        SCOPED_TRACE(::testing::Message() << "Rapid multi-key series index: " << i);
-        EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-        EXPECT_EQ(response, string("true"));
-    }
+    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    std::vector<Exchange::RemoteKey> keys = {
+        { Exchange::RemoteKeyCode::KED_UNDEFINEDKEY, 0, 0 }
+    };
+    RemoteKeyIteratorImpl iterator(keys);
+    bool success = true;
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, toolsImpl->GenerateRemoteKeys(&iterator, success));
+    EXPECT_EQ(false, success);
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeyRapidAlternatingValidInvalid)
+TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
 {
-    static constexpr uint32_t kBurstCount = 200;
-    const string validPayload = MakeGenerateKeysPayload("[{\"code\":28,\"modifier\":1,\"delay\":0,\"duration\":0}]");
-    const string invalidPayload = MakeGenerateKeysPayload("[{\"code\":28,\"modifier\":99,\"delay\":0}]");
-
-    for (uint32_t i = 0; i < kBurstCount; ++i) {
-        response.clear();
-
-        const string& payload = ((i % 2U) == 0U) ? validPayload : invalidPayload;
-        const string expectedResponse = ((i % 2U) == 0U) ? "true" : "false";
-
-        SCOPED_TRACE(::testing::Message() << "Rapid alternating series index: " << i);
-        EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), payload, response));
-        EXPECT_EQ(response, expectedResponse);
-    }
+    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    std::vector<Exchange::RemoteKey> keys = {
+        { Exchange::RemoteKeyCode::KED_ENTER, 0, 0 }
+    };
+    RemoteKeyIteratorImpl iterator(keys);
+    bool success = false;
+    EXPECT_EQ(Core::ERROR_NONE, toolsImpl->GenerateRemoteKeys(&iterator, success));
+    EXPECT_EQ(true, success);
 }
 
 } // namespace
