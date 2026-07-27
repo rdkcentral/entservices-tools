@@ -21,7 +21,9 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <iostream>
+#include <thread>
 #include <vector>
 
 #include "Tools.h"
@@ -322,7 +324,7 @@ TEST_F(ToolsInitializedTest, GenerateKeysFailsOnInvalidModifier)
 
 TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
 {
-    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    ASSERT_TRUE(toolsImpl.IsValid());
     std::vector<Exchange::ToolsKey> keys = {
         { 31, Exchange::Modifier::CTRL, 0, 0 }
     };
@@ -330,6 +332,9 @@ TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
     bool success = false;
     EXPECT_EQ(Core::ERROR_NONE, toolsImpl->GenerateKeys(&iterator, success));
     EXPECT_EQ(true, success);
+
+    // Allow the configured worker thread to dequeue and dispatch the queued event.
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnEmptyIterator)
@@ -356,7 +361,7 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnUnsupportedCode)
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
 {
-    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    ASSERT_TRUE(toolsImpl.IsValid());
     std::vector<Exchange::RemoteKey> keys = {
         { Exchange::RemoteKeyCode::KED_ENTER, 0, 0 }
     };
@@ -364,11 +369,14 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
     bool success = false;
     EXPECT_EQ(Core::ERROR_NONE, toolsImpl->GenerateRemoteKeys(&iterator, success));
     EXPECT_EQ(true, success);
+
+    // Allow the configured worker thread to dequeue and dispatch the queued event.
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
 {
-    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    ASSERT_TRUE(toolsImpl.IsValid());
 
     struct RemoteKeyExpectation {
         Exchange::RemoteKeyCode code;
@@ -455,6 +463,9 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
             EXPECT_EQ(false, success);
         }
     }
+
+    // Wait for queued remote key events to be consumed by the worker thread.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
 } // namespace
