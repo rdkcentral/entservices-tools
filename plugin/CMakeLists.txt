@@ -23,6 +23,7 @@ set(PLUGIN_TOOLS_STARTUPORDER "" CACHE STRING "To configure startup order of Too
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Helpers REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
         Tools.cpp
@@ -57,7 +58,7 @@ target_compile_definitions(${PLUGIN_IMPLEMENTATION} PRIVATE MODULE_NAME=Plugin_$
 
 target_include_directories(${MODULE_NAME} PRIVATE ../plugin)
 target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ../plugin)
-target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${NAMESPACE}::${NAMESPACE}Helpers)
+target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${NAMESPACE}::${NAMESPACE}Helpers ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${NAMESPACE}::${NAMESPACE}Helpers)
 
 set(INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})
