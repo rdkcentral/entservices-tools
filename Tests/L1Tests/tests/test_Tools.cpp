@@ -380,8 +380,9 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
 {
-    auto configuredImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
-    ASSERT_EQ(Core::ERROR_NONE, configuredImpl->Configure(&service));
+    // Keep this test focused on validating the full key mapping table.
+    // Do not configure worker/uinput here to avoid long per-key dispatch logging.
+    auto mappingOnlyImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
 
     // Build a single batch of all supported remote keys to be validated.
     std::vector<Exchange::RemoteKey> allKeys = {
@@ -447,7 +448,7 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
 
     RemoteKeyIteratorImpl iterator(allKeys);
     bool success = false;
-    EXPECT_EQ(Core::ERROR_NONE, configuredImpl->GenerateRemoteKeys(&iterator, success));
+    EXPECT_EQ(Core::ERROR_NONE, mappingOnlyImpl->GenerateRemoteKeys(&iterator, success));
     EXPECT_EQ(true, success);
 
     // Verify unsupported/default code path separately.
@@ -456,11 +457,8 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
     };
     RemoteKeyIteratorImpl unsupportedIterator(unsupportedKeys);
     bool unsupportedSuccess = true;
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, configuredImpl->GenerateRemoteKeys(&unsupportedIterator, unsupportedSuccess));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, mappingOnlyImpl->GenerateRemoteKeys(&unsupportedIterator, unsupportedSuccess));
     EXPECT_EQ(false, unsupportedSuccess);
-
-    // Wait for all queued remote key events to be consumed by the worker thread.
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
 
 } // namespace

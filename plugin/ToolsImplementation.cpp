@@ -396,22 +396,33 @@ Core::hresult ToolsImplementation::GenerateKeys(Exchange::IToolsKeyIterator* con
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 
+	std::vector<Exchange::ToolsKey> requestedKeys;
 	Exchange::ToolsKey key;
-	uint32_t index = 0;
 	while (keys->Next(key) == true) {
+		requestedKeys.push_back(key);
+	}
 
-		if ((key.code < 0) || (key.code > KEY_MAX)) {
-			LOGERR("ToolsImplementation::GenerateKeys invalid linux keyCode '%d' at entry %u", key.code, index);
+	if (requestedKeys.empty()) {
+		LOGERR("ToolsImplementation::GenerateKeys invalid input: keys iterator is empty");
+		success = false;
+		return Core::ERROR_INVALID_INPUT_LENGTH;
+	}
+
+	for (uint32_t index = 0; index < requestedKeys.size(); ++index) {
+		const Exchange::ToolsKey& currentKey = requestedKeys[index];
+
+		if ((currentKey.code < 0) || (currentKey.code > KEY_MAX)) {
+			LOGERR("ToolsImplementation::GenerateKeys invalid linux keyCode '%d' at entry %u", currentKey.code, index);
 			success = false;
 			return Core::ERROR_INVALID_INPUT_LENGTH;
 		}
 
 		QueuedKeyEvent keyEvent;
-		keyEvent.keyCode = static_cast<uint32_t>(key.code);
-		keyEvent.delayMs = key.delay * 1000;
-		keyEvent.durationMs = key.duration * 1000;
+		keyEvent.keyCode = static_cast<uint32_t>(currentKey.code);
+		keyEvent.delayMs = currentKey.delay * 1000;
+		keyEvent.durationMs = currentKey.duration * 1000;
 
-		switch (key.modifier) {
+		switch (currentKey.modifier) {
 		case Exchange::NONE:
 			break;
 		case Exchange::CTRL:
@@ -441,7 +452,7 @@ Core::hresult ToolsImplementation::GenerateKeys(Exchange::IToolsKeyIterator* con
 			keyEvent.modifiers.push_back("ctrl");
 			break;
 		default:
-			LOGERR("ToolsImplementation::GenerateKeys invalid modifier '%u' at entry %u", static_cast<uint32_t>(key.modifier), index);
+			LOGERR("ToolsImplementation::GenerateKeys invalid modifier '%u' at entry %u", static_cast<uint32_t>(currentKey.modifier), index);
 			success = false;
 			return Core::ERROR_INVALID_INPUT_LENGTH;
 		}
@@ -449,13 +460,6 @@ Core::hresult ToolsImplementation::GenerateKeys(Exchange::IToolsKeyIterator* con
 		std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
 		_sendKeyQueue.push(keyEvent);
 		_sendKeyThreadRun = true;
-		++index;
-	}
-
-	if (index == 0) {
-		LOGERR("ToolsImplementation::GenerateKeys invalid input: keys iterator is empty");
-		success = false;
-		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 	_sendKeyCv.notify_one();
 
@@ -472,32 +476,36 @@ Core::hresult ToolsImplementation::GenerateRemoteKeys(Exchange::IRemoteKeyIterat
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 
+	std::vector<Exchange::RemoteKey> requestedKeys;
 	Exchange::RemoteKey key;
-	uint32_t index = 0;
 	while (keys->Next(key) == true) {
-		const uint32_t linuxKeyCode = remoteKeyCodeToLinuxKeyCode(key.code);
+		requestedKeys.push_back(key);
+	}
+
+	if (requestedKeys.empty()) {
+		LOGERR("ToolsImplementation::GenerateRemoteKeys invalid input: keys iterator is empty");
+		success = false;
+		return Core::ERROR_INVALID_INPUT_LENGTH;
+	}
+
+	for (uint32_t index = 0; index < requestedKeys.size(); ++index) {
+		const Exchange::RemoteKey& currentKey = requestedKeys[index];
+		const uint32_t linuxKeyCode = remoteKeyCodeToLinuxKeyCode(currentKey.code);
 
 		if (linuxKeyCode == KEY_RESERVED) {
-			LOGERR("ToolsImplementation::GenerateRemoteKeys unsupported remote key code '%u' at entry %u", static_cast<uint32_t>(key.code), index);
+			LOGERR("ToolsImplementation::GenerateRemoteKeys unsupported remote key code '%u' at entry %u", static_cast<uint32_t>(currentKey.code), index);
 			success = false;
 			return Core::ERROR_INVALID_INPUT_LENGTH;
 		}
 
 		QueuedKeyEvent keyEvent;
 		keyEvent.keyCode = linuxKeyCode;
-		keyEvent.delayMs = key.delay * 1000;
-		keyEvent.durationMs = key.duration * 1000;
+		keyEvent.delayMs = currentKey.delay * 1000;
+		keyEvent.durationMs = currentKey.duration * 1000;
 
 		std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
 		_sendKeyQueue.push(keyEvent);
 		_sendKeyThreadRun = true;
-		++index;
-	}
-
-	if (index == 0) {
-		LOGERR("ToolsImplementation::GenerateRemoteKeys invalid input: keys iterator is empty");
-		success = false;
-		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 	_sendKeyCv.notify_one();
 
