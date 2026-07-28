@@ -23,7 +23,7 @@
 #include <algorithm>
 #include <atomic>
 
-
+#include "L2TestMocks.h"
 #include <com/Administrator.h>
 #include <com/Communicator.h>
 #include <interfaces/ITools.h>
