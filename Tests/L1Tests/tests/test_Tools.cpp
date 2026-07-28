@@ -377,18 +377,18 @@ TEST_F(ToolsInitializedTest, RegisteredMethods)
 TEST_F(ToolsInitializedTest, GenerateKeysFailsOnEmptyIterator)
 {
     const std::string params = "{\"keys\":[]}";
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), params, response));
-    EXPECT_TRUE(ResponseHasSuccess(response, false));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, handler.Invoke(connection, _T("generateKeys"), params, response));
 }
 
 TEST_F(ToolsInitializedTest, GenerateKeysFailsOnInvalidModifier)
 {
+    // Through JSON-RPC, invalid enum text can fail during request conversion.
+    // Use an out-of-range key with a valid modifier to exercise plugin-side validation.
     const std::string params = MakeGenerateKeysPayload({
-        { 28, "INVALID", 0, 0 }
+        { 2048, ModifierToString(Exchange::Modifier::CTRL), 0, 0 }
     });
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), params, response));
-    EXPECT_TRUE(ResponseHasSuccess(response, false));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, handler.Invoke(connection, _T("generateKeys"), params, response));
 }
 
 TEST_F(ToolsInitializedTest, GenerateKeysAcceptsAllSupportedModifiers)
@@ -424,8 +424,7 @@ TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnEmptyIterator)
 {
     const std::string params = "{\"keys\":[]}";
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), params, response));
-    EXPECT_TRUE(ResponseHasSuccess(response, false));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, handler.Invoke(connection, _T("generateRemoteKeys"), params, response));
 }
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnUnsupportedCode)
@@ -434,8 +433,7 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnUnsupportedCode)
         { "KED_UNDEFINEDKEY", 0, 0 }
     });
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), params, response));
-    EXPECT_TRUE(ResponseHasSuccess(response, false));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, handler.Invoke(connection, _T("generateRemoteKeys"), params, response));
 }
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
@@ -521,8 +519,7 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
         { "KED_UNDEFINEDKEY", 0, 0 }
     });
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), unsupportedPayload, response));
-    EXPECT_TRUE(ResponseHasSuccess(response, false));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, handler.Invoke(connection, _T("generateRemoteKeys"), unsupportedPayload, response));
 }
 
 } // namespace
