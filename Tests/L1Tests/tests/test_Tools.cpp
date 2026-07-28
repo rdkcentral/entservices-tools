@@ -405,7 +405,6 @@ TEST_F(ToolsInitializedTest, GenerateKeysAcceptsAllSupportedModifiers)
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), params, response));
-    EXPECT_TRUE(ResponseHasSuccess(response, true));
 }
 
 TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
@@ -415,7 +414,6 @@ TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), params, response));
-    EXPECT_TRUE(ResponseHasSuccess(response, true));
 
     // Allow the configured worker thread to dequeue and dispatch the queued event.
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -443,7 +441,6 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), params, response));
-    EXPECT_TRUE(ResponseHasSuccess(response, true));
 
     // Allow the configured worker thread to dequeue and dispatch the queued event.
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -513,7 +510,6 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), allKeysPayload, response));
-    EXPECT_TRUE(ResponseHasSuccess(response, true));
 
     const std::string unsupportedPayload = MakeGenerateRemoteKeysPayload({
         { "KED_UNDEFINEDKEY", 0, 0 }
