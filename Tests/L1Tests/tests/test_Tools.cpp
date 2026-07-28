@@ -20,10 +20,11 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
-#include <atomic>
 #include <chrono>
 #include <iostream>
+#include <sstream>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #include "Tools.h"
@@ -37,6 +38,79 @@
 using namespace WPEFramework;
 
 namespace {
+
+const char* ModifierToString(const Exchange::Modifier modifier)
+{
+    switch (modifier) {
+    case Exchange::Modifier::NONE:
+        return "NONE";
+    case Exchange::Modifier::CTRL:
+        return "CTRL";
+    case Exchange::Modifier::ALT:
+        return "ALT";
+    case Exchange::Modifier::ALT_CTRL:
+        return "ALT_CTRL";
+    case Exchange::Modifier::SHIFT:
+        return "SHIFT";
+    case Exchange::Modifier::SHIFT_CTRL:
+        return "SHIFT_CTRL";
+    case Exchange::Modifier::SHIFT_ALT:
+        return "SHIFT_ALT";
+    case Exchange::Modifier::SHIFT_ALT_CTRL:
+        return "SHIFT_ALT_CTRL";
+    default:
+        return "INVALID";
+    }
+}
+
+std::string MakeGenerateKeysPayload(const std::vector<std::tuple<int, std::string, uint32_t, uint32_t>>& keys)
+{
+    std::ostringstream payload;
+    payload << "{\"keys\":[";
+
+    for (size_t i = 0; i < keys.size(); ++i) {
+        if (i > 0) {
+            payload << ',';
+        }
+
+        const auto& key = keys[i];
+        payload << "{\"code\":" << std::get<0>(key)
+                << ",\"modifier\":\"" << std::get<1>(key)
+                << "\",\"delay\":" << std::get<2>(key)
+                << ",\"duration\":" << std::get<3>(key)
+                << "}";
+    }
+
+    payload << "]}";
+    return payload.str();
+}
+
+std::string MakeGenerateRemoteKeysPayload(const std::vector<std::tuple<std::string, uint32_t, uint32_t>>& keys)
+{
+    std::ostringstream payload;
+    payload << "{\"keys\":[";
+
+    for (size_t i = 0; i < keys.size(); ++i) {
+        if (i > 0) {
+            payload << ',';
+        }
+
+        const auto& key = keys[i];
+        payload << "{\"code\":\"" << std::get<0>(key)
+                << "\",\"delay\":" << std::get<1>(key)
+                << ",\"duration\":" << std::get<2>(key)
+                << "}";
+    }
+
+    payload << "]}";
+    return payload.str();
+}
+
+bool ResponseHasSuccess(const std::string& response, const bool expectedSuccess)
+{
+    const std::string token = expectedSuccess ? "\"success\":true" : "\"success\":false";
+    return (response.find(token) != std::string::npos);
+}
 
 class ToolsKeyIteratorImpl final : public Exchange::IToolsKeyIterator {
 public:
@@ -302,59 +376,46 @@ TEST_F(ToolsInitializedTest, RegisteredMethods)
 
 TEST_F(ToolsInitializedTest, GenerateKeysFailsOnEmptyIterator)
 {
-    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
-    std::vector<Exchange::ToolsKey> keys;
-    ToolsKeyIteratorImpl iterator(keys);
-    bool success = true;
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, toolsImpl->GenerateKeys(&iterator, success));
-    EXPECT_EQ(false, success);
+    const std::string params = "{\"keys\":[]}";
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), params, response));
+    EXPECT_TRUE(ResponseHasSuccess(response, false));
 }
 
 TEST_F(ToolsInitializedTest, GenerateKeysFailsOnInvalidModifier)
 {
-    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
-    std::vector<Exchange::ToolsKey> keys = {
-        { 28, static_cast<Exchange::Modifier>(99), 0, 0 }
-    };
-    ToolsKeyIteratorImpl iterator(keys);
-    bool success = true;
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, toolsImpl->GenerateKeys(&iterator, success));
-    EXPECT_EQ(false, success);
+    const std::string params = MakeGenerateKeysPayload({
+        { 28, "INVALID", 0, 0 }
+    });
+
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), params, response));
+    EXPECT_TRUE(ResponseHasSuccess(response, false));
 }
 
 TEST_F(ToolsInitializedTest, GenerateKeysAcceptsAllSupportedModifiers)
 {
-    auto mappingOnlyImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    const std::string params = MakeGenerateKeysPayload({
+        { 30, ModifierToString(Exchange::Modifier::NONE), 0, 0 },
+        { 31, ModifierToString(Exchange::Modifier::CTRL), 0, 0 },
+        { 32, ModifierToString(Exchange::Modifier::ALT), 0, 0 },
+        { 33, ModifierToString(Exchange::Modifier::ALT_CTRL), 0, 0 },
+        { 34, ModifierToString(Exchange::Modifier::SHIFT), 0, 0 },
+        { 35, ModifierToString(Exchange::Modifier::SHIFT_CTRL), 0, 0 },
+        { 36, ModifierToString(Exchange::Modifier::SHIFT_ALT), 0, 0 },
+        { 37, ModifierToString(Exchange::Modifier::SHIFT_ALT_CTRL), 0, 0 }
+    });
 
-    std::vector<Exchange::ToolsKey> keys = {
-        { 30, Exchange::Modifier::NONE, 0, 0 },
-        { 31, Exchange::Modifier::CTRL, 0, 0 },
-        { 32, Exchange::Modifier::ALT, 0, 0 },
-        { 33, Exchange::Modifier::ALT_CTRL, 0, 0 },
-        { 34, Exchange::Modifier::SHIFT, 0, 0 },
-        { 35, Exchange::Modifier::SHIFT_CTRL, 0, 0 },
-        { 36, Exchange::Modifier::SHIFT_ALT, 0, 0 },
-        { 37, Exchange::Modifier::SHIFT_ALT_CTRL, 0, 0 }
-    };
-
-    ToolsKeyIteratorImpl iterator(keys);
-    bool success = false;
-    EXPECT_EQ(Core::ERROR_NONE, mappingOnlyImpl->GenerateKeys(&iterator, success));
-    EXPECT_EQ(true, success);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), params, response));
+    EXPECT_TRUE(ResponseHasSuccess(response, true));
 }
 
 TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
 {
-    auto configuredImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
-    ASSERT_EQ(Core::ERROR_NONE, configuredImpl->Configure(&service));
+    const std::string params = MakeGenerateKeysPayload({
+        { 31, ModifierToString(Exchange::Modifier::CTRL), 0, 0 }
+    });
 
-    std::vector<Exchange::ToolsKey> keys = {
-        { 31, Exchange::Modifier::CTRL, 0, 0 }
-    };
-    ToolsKeyIteratorImpl iterator(keys);
-    bool success = false;
-    EXPECT_EQ(Core::ERROR_NONE, configuredImpl->GenerateKeys(&iterator, success));
-    EXPECT_EQ(true, success);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), params, response));
+    EXPECT_TRUE(ResponseHasSuccess(response, true));
 
     // Allow the configured worker thread to dequeue and dispatch the queued event.
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -362,38 +423,29 @@ TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnEmptyIterator)
 {
-    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
-    std::vector<Exchange::RemoteKey> keys;
-    RemoteKeyIteratorImpl iterator(keys);
-    bool success = true;
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, toolsImpl->GenerateRemoteKeys(&iterator, success));
-    EXPECT_EQ(false, success);
+    const std::string params = "{\"keys\":[]}";
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), params, response));
+    EXPECT_TRUE(ResponseHasSuccess(response, false));
 }
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnUnsupportedCode)
 {
-    toolsImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
-    std::vector<Exchange::RemoteKey> keys = {
-        { Exchange::RemoteKeyCode::KED_UNDEFINEDKEY, 0, 0 }
-    };
-    RemoteKeyIteratorImpl iterator(keys);
-    bool success = true;
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, toolsImpl->GenerateRemoteKeys(&iterator, success));
-    EXPECT_EQ(false, success);
+    const std::string params = MakeGenerateRemoteKeysPayload({
+        { "KED_UNDEFINEDKEY", 0, 0 }
+    });
+
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), params, response));
+    EXPECT_TRUE(ResponseHasSuccess(response, false));
 }
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
 {
-    auto configuredImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
-    ASSERT_EQ(Core::ERROR_NONE, configuredImpl->Configure(&service));
+    const std::string params = MakeGenerateRemoteKeysPayload({
+        { "KED_ENTER", 0, 0 }
+    });
 
-    std::vector<Exchange::RemoteKey> keys = {
-        { Exchange::RemoteKeyCode::KED_ENTER, 0, 0 }
-    };
-    RemoteKeyIteratorImpl iterator(keys);
-    bool success = false;
-    EXPECT_EQ(Core::ERROR_NONE, configuredImpl->GenerateRemoteKeys(&iterator, success));
-    EXPECT_EQ(true, success);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), params, response));
+    EXPECT_TRUE(ResponseHasSuccess(response, true));
 
     // Allow the configured worker thread to dequeue and dispatch the queued event.
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -401,85 +453,76 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
 {
-    // Keep this test focused on validating the full key mapping table.
-    // Do not configure worker/uinput here to avoid long per-key dispatch logging.
-    auto mappingOnlyImpl = Core::ProxyType<Plugin::ToolsImplementation>::Create();
+    const std::string allKeysPayload = MakeGenerateRemoteKeysPayload({
+        { "KED_MENU", 0, 0 },
+        { "KED_GUIDE", 0, 0 },
+        { "KED_INFO", 0, 0 },
+        { "KED_STAR", 0, 0 },
+        { "KED_TVPOWER", 0, 0 },
+        { "KED_INPUTKEY", 0, 0 },
+        { "KED_OK", 0, 0 },
+        { "KED_SELECT", 0, 0 },
+        { "KED_ENTER", 0, 0 },
+        { "KED_EXIT", 0, 0 },
+        { "KED_BACK", 0, 0 },
+        { "KED_PERIOD", 0, 0 },
+        { "KED_PUSH_TO_TALK", 0, 0 },
+        { "KED_POWER", 0, 0 },
+        { "KED_CHANNELUP", 0, 0 },
+        { "KED_CHANNELDOWN", 0, 0 },
+        { "KED_VOLUMEUP", 0, 0 },
+        { "KED_VOLUMEDOWN", 0, 0 },
+        { "KED_MUTE", 0, 0 },
+        { "KED_DIGIT1", 0, 0 },
+        { "KED_DIGIT2", 0, 0 },
+        { "KED_DIGIT3", 0, 0 },
+        { "KED_DIGIT4", 0, 0 },
+        { "KED_DIGIT5", 0, 0 },
+        { "KED_DIGIT6", 0, 0 },
+        { "KED_DIGIT7", 0, 0 },
+        { "KED_DIGIT8", 0, 0 },
+        { "KED_DIGIT9", 0, 0 },
+        { "KED_DIGIT0", 0, 0 },
+        { "KED_FASTFORWARD", 0, 0 },
+        { "KED_REWIND", 0, 0 },
+        { "KED_PAUSE", 0, 0 },
+        { "KED_PLAY", 0, 0 },
+        { "KED_STOP", 0, 0 },
+        { "KED_RECORD", 0, 0 },
+        { "KED_ARROWUP", 0, 0 },
+        { "KED_ARROWDOWN", 0, 0 },
+        { "KED_ARROWLEFT", 0, 0 },
+        { "KED_ARROWRIGHT", 0, 0 },
+        { "KED_PAGEUP", 0, 0 },
+        { "KED_PAGEDOWN", 0, 0 },
+        { "KED_LAST", 0, 0 },
+        { "KED_FAVORITE", 0, 0 },
+        { "KED_KEYA", 0, 0 },
+        { "KED_KEYB", 0, 0 },
+        { "KED_KEYC", 0, 0 },
+        { "KED_KEYD", 0, 0 },
+        { "KED_HELP", 0, 0 },
+        { "KED_SETUP", 0, 0 },
+        { "KED_NEXT", 0, 0 },
+        { "KED_PREVIOUS", 0, 0 },
+        { "KED_ONDEMAND", 0, 0 },
+        { "KED_POUND", 0, 0 },
+        { "KED_AUDIO", 0, 0 },
+        { "KED_CLOSED_CAPTIONING", 0, 0 },
+        { "KED_REPLAY", 0, 0 },
+        { "KED_SEARCH", 0, 0 },
+        { "KED_RF_PAIR_GHOST", 0, 0 }
+    });
 
-    // Build a single batch of all supported remote keys to be validated.
-    std::vector<Exchange::RemoteKey> allKeys = {
-        { Exchange::RemoteKeyCode::KED_MENU, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_GUIDE, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_INFO, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_STAR, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_TVPOWER, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_INPUTKEY, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_OK, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_SELECT, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_ENTER, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_EXIT, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_BACK, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_PERIOD, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_PUSH_TO_TALK, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_POWER, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_CHANNELUP, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_CHANNELDOWN, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_VOLUMEUP, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_VOLUMEDOWN, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_MUTE, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_DIGIT1, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_DIGIT2, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_DIGIT3, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_DIGIT4, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_DIGIT5, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_DIGIT6, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_DIGIT7, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_DIGIT8, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_DIGIT9, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_DIGIT0, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_FASTFORWARD, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_REWIND, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_PAUSE, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_PLAY, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_STOP, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_RECORD, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_ARROWUP, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_ARROWDOWN, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_ARROWLEFT, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_ARROWRIGHT, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_PAGEUP, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_PAGEDOWN, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_LAST, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_FAVORITE, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_KEYA, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_KEYB, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_KEYC, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_KEYD, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_HELP, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_SETUP, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_NEXT, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_PREVIOUS, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_ONDEMAND, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_POUND, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_AUDIO, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_CLOSED_CAPTIONING, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_REPLAY, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_SEARCH, 0, 0 },
-        { Exchange::RemoteKeyCode::KED_RF_PAIR_GHOST, 0, 0 }
-    };
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), allKeysPayload, response));
+    EXPECT_TRUE(ResponseHasSuccess(response, true));
 
-    RemoteKeyIteratorImpl iterator(allKeys);
-    bool success = false;
-    EXPECT_EQ(Core::ERROR_NONE, mappingOnlyImpl->GenerateRemoteKeys(&iterator, success));
-    EXPECT_EQ(true, success);
+    const std::string unsupportedPayload = MakeGenerateRemoteKeysPayload({
+        { "KED_UNDEFINEDKEY", 0, 0 }
+    });
 
-    // Verify unsupported/default code path separately.
-    std::vector<Exchange::RemoteKey> unsupportedKeys = {
-        { Exchange::RemoteKeyCode::KED_UNDEFINEDKEY, 0, 0 }
-    };
-    RemoteKeyIteratorImpl unsupportedIterator(unsupportedKeys);
-    bool unsupportedSuccess = true;
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, mappingOnlyImpl->GenerateRemoteKeys(&unsupportedIterator, unsupportedSuccess));
-    EXPECT_EQ(false, unsupportedSuccess);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), unsupportedPayload, response));
+    EXPECT_TRUE(ResponseHasSuccess(response, false));
 }
 
 } // namespace
