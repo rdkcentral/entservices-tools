@@ -67,7 +67,9 @@ target_include_directories(
     ../../../entservices-testframework/Tests/mocks/MockPlugin
     ../../../entservices-testframework/Tests/L2Tests
     ../../../entservices-testframework/Tests/L2Tests/L2TestsPlugin
+    ../../../entservices-apis/interfaces
     ${CMAKE_INSTALL_PREFIX}/include
+    ${CMAKE_INSTALL_PREFIX}/include/WPEFramework
     )
 
 install(TARGETS ${MODULE_NAME} DESTINATION lib)
