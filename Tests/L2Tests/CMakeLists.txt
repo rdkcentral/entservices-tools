@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2023 RDK Management
+# Copyright 2026 RDK Management
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,6 +65,7 @@ target_include_directories(
     ../../../entservices-testframework/Tests/mocks/thunder
     ../../../entservices-testframework/Tests/mocks/devicesettings
     ../../../entservices-testframework/Tests/mocks/MockPlugin
+    ../../../entservices-testframework/Tests/L2Tests
     ../../../entservices-testframework/Tests/L2Tests/L2TestsPlugin
     ${CMAKE_INSTALL_PREFIX}/include
     )
