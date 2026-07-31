@@ -91,7 +91,7 @@ bool ToolsImplementation::initializeUinputDevice()
 
 	int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
 	if (fd < 0) {
-		LOGERROR("ToolsImplementation::initializeUinputDevice open(/dev/uinput) failed: %s", strerror(errno));
+		LOGERR("ToolsImplementation::initializeUinputDevice open(/dev/uinput) failed: %s", strerror(errno));
 		return false;
 	}
 
@@ -124,7 +124,7 @@ bool ToolsImplementation::initializeUinputDevice()
 	}
 
 	if (!success) {
-		LOGERROR("ToolsImplementation::initializeUinputDevice setup failed: %s", strerror(errno));
+		LOGERR("ToolsImplementation::initializeUinputDevice setup failed: %s", strerror(errno));
 		close(fd);
 		return false;
 	}
@@ -158,7 +158,7 @@ bool ToolsImplementation::sendKeyEvent(const uint32_t keyCode, const bool presse
 	event.value = pressed ? 1 : 0;
 
 	if (write(_uinputFd, &event, sizeof(event)) != sizeof(event)) {
-		LOGERROR("ToolsImplementation::sendKeyEvent failed to write key event: %s", strerror(errno));
+		LOGERR("ToolsImplementation::sendKeyEvent failed to write key event: %s", strerror(errno));
 		return false;
 	}
 
@@ -166,7 +166,7 @@ bool ToolsImplementation::sendKeyEvent(const uint32_t keyCode, const bool presse
 	event.code = SYN_REPORT;
 	event.value = 0;
 	if (write(_uinputFd, &event, sizeof(event)) != sizeof(event)) {
-		LOGERROR("ToolsImplementation::sendKeyEvent failed to write sync event: %s", strerror(errno));
+		LOGERR("ToolsImplementation::sendKeyEvent failed to write sync event: %s", strerror(errno));
 		return false;
 	}
 
@@ -304,7 +304,7 @@ void ToolsImplementation::dispatchQueuedKeyEvent(const QueuedKeyEvent& keyEvent)
 {
 	LOGDBG("%s: Enter", __FUNCTION__);
 	if ((_uinputInitialized == false) || (_uinputFd < 0)) {
-		LOGERROR("ToolsImplementation::dispatchQueuedKeyEvent uinput is not initialized");
+		LOGERR("ToolsImplementation::dispatchQueuedKeyEvent uinput is not initialized");
 		return;
 	}
 
@@ -380,7 +380,7 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 {
 	LOGDBG("%s: Enter", __FUNCTION__);
 	if (service == nullptr) {
-		LOGERROR("ToolsImplementation::Configure failed, service is null");
+		LOGERR("ToolsImplementation::Configure failed, service is null");
 		return Core::ERROR_GENERAL;
 	}
 
@@ -390,7 +390,7 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 
 	if (_uinputInitialized == false) {
 		if (initializeUinputDevice() == false) {
-			LOGERROR("ToolsImplementation::Configure failed to initialize uinput device");
+			LOGERR("ToolsImplementation::Configure failed to initialize uinput device");
 			return Core::ERROR_GENERAL;
 		}
 		_uinputInitialized = true;
@@ -411,7 +411,7 @@ Core::hresult ToolsImplementation::GenerateKeys(const std::vector<Exchange::Tool
 {
 	LOGDBG("%s: Enter", __FUNCTION__);
 	if (keys.empty()) {
-		LOGERROR("ToolsImplementation::GenerateKeys invalid input: keys list is empty");
+		LOGERR("ToolsImplementation::GenerateKeys invalid input: keys list is empty");
 		success = false;
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
@@ -477,7 +477,7 @@ Core::hresult ToolsImplementation::GenerateRemoteKeys(const std::vector<Exchange
 {
 	LOGDBG("%s: Enter", __FUNCTION__);
 	if (keys.empty()) {
-		LOGERROR("ToolsImplementation::GenerateRemoteKeys invalid input: keys list is empty");
+		LOGERR("ToolsImplementation::GenerateRemoteKeys invalid input: keys list is empty");
 		success = false;
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
