@@ -2,7 +2,7 @@
 * If not stated otherwise in this file or this component's LICENSE
 * file the following copyright and licenses apply:
 *
-* Copyright 2019 RDK Management
+* Copyright 2026 RDK Management
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 
 #define API_VERSION_NUMBER_MAJOR 1
 #define API_VERSION_NUMBER_MINOR 0
-#define API_VERSION_NUMBER_PATCH 6
+#define API_VERSION_NUMBER_PATCH 0
 
 namespace WPEFramework
 {
@@ -122,7 +122,7 @@ namespace WPEFramework
 
         string Tools::Information() const
         {
-            return("This tools plugin provides external tools access to the device. It is a proxy to the ToolsImplementation plugin.");
+            return("This tools plugin provides external and internal tools access to the device. ");
         }
 
         void Tools::Deactivated(RPC::IRemoteConnection* connection)
