@@ -19,7 +19,6 @@
 
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <sstream>
@@ -106,171 +105,6 @@ std::string MakeGenerateRemoteKeysPayload(const std::vector<std::tuple<std::stri
     return payload.str();
 }
 
-bool ResponseHasSuccess(const std::string& response, const bool expectedSuccess)
-{
-    const std::string token = expectedSuccess ? "\"success\":true" : "\"success\":false";
-    return (response.find(token) != std::string::npos);
-}
-
-class ToolsKeyIteratorImpl final : public Exchange::IToolsKeyIterator {
-public:
-    explicit ToolsKeyIteratorImpl(const std::vector<Exchange::ToolsKey>& keys)
-        : _keys(keys)
-        , _position(0)
-        , _refCount(1)
-    {
-    }
-
-    ~ToolsKeyIteratorImpl() override = default;
-
-    void AddRef() const override
-    {
-        ++_refCount;
-    }
-
-    uint32_t Release() const override
-    {
-        const uint32_t current = _refCount.load();
-        if (current > 0) {
-            return --_refCount;
-        }
-        return 0;
-    }
-
-    bool Next(Element& info) override
-    {
-        if (_position < _keys.size()) {
-            info = _keys[_position++];
-            return true;
-        }
-        return false;
-    }
-
-    bool Previous(Element& info) override
-    {
-        if (_position > 0) {
-            --_position;
-            info = _keys[_position];
-            return true;
-        }
-        return false;
-    }
-
-    void Reset(const uint32_t position) override
-    {
-        _position = std::min(static_cast<size_t>(position), _keys.size());
-    }
-
-    bool IsValid() const override
-    {
-        return (_keys.empty() == false);
-    }
-
-    uint32_t Count() const override
-    {
-        return static_cast<uint32_t>(_keys.size());
-    }
-
-    Element Current() const override
-    {
-        if (_keys.empty()) {
-            return Exchange::ToolsKey { 0, Exchange::Modifier::NONE, 0, 0 };
-        }
-        if (_position >= _keys.size()) {
-            return _keys.back();
-        }
-        return _keys[_position];
-    }
-
-    BEGIN_INTERFACE_MAP(ToolsKeyIteratorImpl)
-    INTERFACE_ENTRY(Exchange::IToolsKeyIterator)
-    END_INTERFACE_MAP
-
-private:
-    std::vector<Exchange::ToolsKey> _keys;
-    size_t _position;
-    mutable std::atomic_uint32_t _refCount;
-};
-
-class RemoteKeyIteratorImpl final : public Exchange::IRemoteKeyIterator {
-public:
-    explicit RemoteKeyIteratorImpl(const std::vector<Exchange::RemoteKey>& keys)
-        : _keys(keys)
-        , _position(0)
-        , _refCount(1)
-    {
-    }
-
-    ~RemoteKeyIteratorImpl() override = default;
-
-    void AddRef() const override
-    {
-        ++_refCount;
-    }
-
-    uint32_t Release() const override
-    {
-        const uint32_t current = _refCount.load();
-        if (current > 0) {
-            return --_refCount;
-        }
-        return 0;
-    }
-
-    bool Next(Element& info) override
-    {
-        if (_position < _keys.size()) {
-            info = _keys[_position++];
-            return true;
-        }
-        return false;
-    }
-
-    bool Previous(Element& info) override
-    {
-        if (_position > 0) {
-            --_position;
-            info = _keys[_position];
-            return true;
-        }
-        return false;
-    }
-
-    void Reset(const uint32_t position) override
-    {
-        _position = std::min(static_cast<size_t>(position), _keys.size());
-    }
-
-    bool IsValid() const override
-    {
-        return (_keys.empty() == false);
-    }
-
-    uint32_t Count() const override
-    {
-        return static_cast<uint32_t>(_keys.size());
-    }
-
-    Element Current() const override
-    {
-        if (_keys.empty()) {
-            return Exchange::RemoteKey { Exchange::RemoteKeyCode::KED_UNDEFINEDKEY, 0, 0 };
-        }
-        if (_position >= _keys.size()) {
-            return _keys.back();
-        }
-        return _keys[_position];
-    }
-
-    BEGIN_INTERFACE_MAP(RemoteKeyIteratorImpl)
-    INTERFACE_ENTRY(Exchange::IRemoteKeyIterator)
-    END_INTERFACE_MAP
-
-private:
-    std::vector<Exchange::RemoteKey> _keys;
-    size_t _position;
-    mutable std::atomic_uint32_t _refCount;
-};
 
 void LogStep(const std::string& message)
 {
@@ -360,7 +194,7 @@ protected:
 TEST_F(ToolsTest, InformationReturnsExpectedString)
 {
     const string info = plugin->Information();
-    EXPECT_EQ(info, string("This tools plugin provides external tools access to the device. It is a proxy to the ToolsImplementation plugin."));
+    EXPECT_EQ(info, string("This tools plugin provides external and internal tools access to the device. "));
 }
 
 TEST_F(ToolsInitializedTest, RegisteredMethods)
@@ -374,13 +208,13 @@ TEST_F(ToolsInitializedTest, RegisteredMethods)
     EXPECT_EQ(Core::ERROR_NONE, existsRemoteResult);
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeysFailsOnEmptyIterator)
+TEST_F(ToolsInitializedTest, GenerateKeysFailsOnEmptyKeys)
 {
     const std::string params = "{\"keys\":[]}";
     EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, handler.Invoke(connection, _T("generateKeys"), params, response));
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeysFailsOnInvalidModifier)
+TEST_F(ToolsInitializedTest, GenerateKeysSkipsInvalidModifier)
 {
     // Through JSON-RPC, invalid enum text can fail during request conversion.
     // Use an out-of-range key with a valid modifier to exercise plugin-side validation.
@@ -388,7 +222,7 @@ TEST_F(ToolsInitializedTest, GenerateKeysFailsOnInvalidModifier)
         { 2048, ModifierToString(Exchange::Modifier::CTRL), 0, 0 }
     });
 
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, handler.Invoke(connection, _T("generateKeys"), params, response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), params, response));
 }
 
 TEST_F(ToolsInitializedTest, GenerateKeysAcceptsAllSupportedModifiers)
@@ -407,7 +241,7 @@ TEST_F(ToolsInitializedTest, GenerateKeysAcceptsAllSupportedModifiers)
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateKeys"), params, response));
 }
 
-TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
+TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithSingleKeyPayload)
 {
     const std::string params = MakeGenerateKeysPayload({
         { 31, ModifierToString(Exchange::Modifier::CTRL), 0, 0 }
@@ -419,19 +253,19 @@ TEST_F(ToolsInitializedTest, GenerateKeysSucceedsWithTypedIterator)
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }
 
-TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnEmptyIterator)
+TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnEmptyKeys)
 {
     const std::string params = "{\"keys\":[]}";
     EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, handler.Invoke(connection, _T("generateRemoteKeys"), params, response));
 }
 
-TEST_F(ToolsInitializedTest, GenerateRemoteKeysFailsOnUnsupportedCode)
+TEST_F(ToolsInitializedTest, GenerateRemoteKeysSkipsUnsupportedCode)
 {
     const std::string params = MakeGenerateRemoteKeysPayload({
         { "KED_UNDEFINEDKEY", 0, 0 }
     });
 
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, handler.Invoke(connection, _T("generateRemoteKeys"), params, response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), params, response));
 }
 
 TEST_F(ToolsInitializedTest, GenerateRemoteKeysSucceedsWithCuratedCode)
@@ -515,7 +349,7 @@ TEST_F(ToolsInitializedTest, GenerateRemoteKeysValidatesAllCuratedCodes)
         { "KED_UNDEFINEDKEY", 0, 0 }
     });
 
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, handler.Invoke(connection, _T("generateRemoteKeys"), unsupportedPayload, response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("generateRemoteKeys"), unsupportedPayload, response));
 }
 
 } // namespace

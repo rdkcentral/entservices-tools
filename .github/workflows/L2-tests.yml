@@ -10,11 +10,11 @@ on:
 
 env:
   BUILD_TYPE: Debug
-  THUNDER_REF: "R4.4.1"
+  THUNDER_REF: "R4_4-RDK"
   INTERFACES_REF: "develop"
   AUTOMATICS_UNAME: ${{ secrets.AUTOMATICS_UNAME}}
   AUTOMATICS_PASSCODE: ${{ secrets. AUTOMATICS_PASSCODE}}
-  RDK_SERVICE_L2_TEST: "ON"
+  RDK_SERVICE_L2_TEST: "OFF"
 
 jobs:
   L2-tests:
@@ -82,7 +82,7 @@ jobs:
         with:
           repository: rdkcentral/ThunderTools
           path: ThunderTools
-          ref: R4.4.3
+          ref: R4_4-RDK
           
       - name: Checkout entservices-tools
         if: ${{ inputs.caller_source == 'local' }}
@@ -103,7 +103,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref:  feature/RDKEMW-21355
+          ref:  2.0.0
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
@@ -112,12 +112,6 @@ jobs:
           repository: google/googletest
           path: googletest
           ref: v1.15.0    
-
-      - name: Apply patches ThunderTools
-        run: |  
-          cd $GITHUB_WORKSPACE/ThunderTools
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/00010-R4.4-Add-support-for-project-dir.patch
-          cd -
 
       - name: Build ThunderTools
         run: >
@@ -133,14 +127,6 @@ jobs:
           &&
           cmake --install build/ThunderTools
 
-      - name: Apply patches Thunder
-        run: |
-          cd $GITHUB_WORKSPACE/Thunder
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/Use_Legact_Alt_Based_On_ThunderTools_R4.4.3.patch
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/error_code_R4_4.patch
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/1004-Add-support-for-project-dir.patch
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-733-Add-ENTOS-IDS.patch
-          cd -
 
       - name: Build Thunder
         run: >
@@ -165,13 +151,13 @@ jobs:
         with:
           repository: rdkcentral/entservices-apis
           path: entservices-apis
-          ref: feature/RDKEMW-21352_Key_Generator
+          ref: develop
           run: rm -rf $GITHUB_WORKSPACE/entservices-apis/jsonrpc/DTV.json
 
       - name: Apply patches entservices-apis
         run: |
           cd $GITHUB_WORKSPACE/entservices-apis
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-1007.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/add-l2tests-interface.patch
           cd -
 
       - name: Build entservices-apis
@@ -348,7 +334,6 @@ jobs:
           -DEXCEPTIONS_ENABLE=ON
           -fprofile-arcs
           -ftest-coverage
-          -DUSE_THUNDER_R4=ON
           -DTHUNDER_VERSION=4
           -DTHUNDER_VERSION_MAJOR=4
           -DTHUNDER_VERSION_MINOR=4
@@ -401,13 +386,23 @@ jobs:
           -DDS_FOUND=ON
           -DPLUGIN_TOOLS=ON
           -DRDK_SERVICE_L2_TEST=${{env.RDK_SERVICE_L2_TEST}}
-          -DPLUGIN_L2Tests=OFF
+          -DPLUGIN_L2Tests=ON
+          -DPLUGIN_L2TESTS=ON
+          -DPLUGIN_L2Tests_AUTOSTART=ON
+          -DPLUGIN_L2TESTS_AUTOSTART=ON
           -DUSE_THUNDER_R4=ON
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
           &&
           cmake --build build/entservices-tools -j8
           &&
           cmake --install build/entservices-tools
+
+      - name: Fix TelemetryMock AddRef return type
+        # TelemetryMock.h incorrectly declares AddRef() with return type void
+        # instead of uint32_t, causing a conflict with IReferenceCounted interface.
+        run: |
+          sed -i 's/MOCK_METHOD(void, AddRef,/MOCK_METHOD(uint32_t, AddRef,/g' \
+            $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/TelemetryMock.h
 
       - name: Build entservices-testframework
         run: >
@@ -417,12 +412,13 @@ jobs:
           -DCMAKE_TOOLCHAIN_FILE="${{ env.TOOLCHAIN_FILE }}"
           -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
           -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/install/usr"
+          -DCMAKE_LIBRARY_PATH="$GITHUB_WORKSPACE/install/usr/lib"
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
           -DCMAKE_CXX_FLAGS="
           -DEXCEPTIONS_ENABLE=ON
           -fprofile-arcs
           -ftest-coverage
-          -DUSE_THUNDER_R4=ON
           -DTHUNDER_VERSION=4
           -DTHUNDER_VERSION_MAJOR=4
           -DTHUNDER_VERSION_MINOR=4
@@ -477,13 +473,34 @@ jobs:
           -DDS_FOUND=ON
           -DPLUGIN_TOOLS=ON
           -DRDK_SERVICE_L2_TEST=${{env.RDK_SERVICE_L2_TEST}}
-          -DPLUGIN_L2Tests=OFF
+          -DPLUGIN_L2Tests=ON
+          -DPLUGIN_L2TESTS=ON
+          -DPLUGIN_L2Tests_AUTOSTART=ON
+          -DPLUGIN_L2TESTS_AUTOSTART=ON
           -DUSE_THUNDER_R4=ON
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
           &&
           cmake --build build/entservices-testframework -j8
           &&
           cmake --install build/entservices-testframework
+
+      - name: Debug L2Tests plugin config
+        run: |
+          echo "=== WPEFramework config path ==="
+          ls -la "$GITHUB_WORKSPACE/install/etc/WPEFramework" || true
+          echo "=== Plugin config files ==="
+          ls -la "$GITHUB_WORKSPACE/install/etc/WPEFramework/plugins" || true
+          echo "=== Search for org.rdk.L2Tests ==="
+          grep -Rin "org.rdk.L2Tests" "$GITHUB_WORKSPACE/install/etc/WPEFramework" || true
+          echo "=== L2Tests plugin config contents ==="
+          cat "$GITHUB_WORKSPACE/install/etc/WPEFramework/plugins/L2Tests.json" || true
+          echo "=== Installed L2 test libraries ==="
+          find "$GITHUB_WORKSPACE/install/usr/lib" -maxdepth 2 \( -name "*L2Tests*.so" -o -name "*ToolsL2Tests*.so" \) -print | sort || true
+          echo "=== ldd: libWPEFrameworkL2Tests.so ==="
+          ldd "$GITHUB_WORKSPACE/install/usr/lib/libWPEFrameworkL2Tests.so" || true
+          echo "=== ldd: libWPEFrameworkToolsL2TestsPE.so ==="
+          ldd "$GITHUB_WORKSPACE/install/usr/lib/libWPEFrameworkToolsL2TestsPE.so" || true
+
 
       - name: Set up files
         run: >

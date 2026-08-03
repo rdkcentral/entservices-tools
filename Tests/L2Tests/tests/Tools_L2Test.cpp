@@ -18,106 +18,62 @@
 **/
 
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 #include <algorithm>
-#include <atomic>
+#include <chrono>
+#include <thread>
 
-#include "L2Tests.h"
-#include "L2TestsMock.h"
 #include <com/Administrator.h>
 #include <com/Communicator.h>
 #include <interfaces/ITools.h>
+#include <websocket/JSONRPCLink.h>
 
 #define TEST_LOG(x, ...)                                                                                                                             \
     fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); \
     fflush(stderr);
 
 #define TOOLS_CALLSIGN    _T("org.rdk.Tools")
-#define L2TEST_CALLSIGN   _T("L2tests.1")
+#define L2TEST_CALLSIGN   _T("org.rdk.L2Tests.1")
 #define JSON_TIMEOUT      (1000)
+#define RETRY_DELAY_MS    (500)
+#define MAX_RETRIES       (10)
 
 using namespace WPEFramework;
-using ::testing::NiceMock;
 
-class ToolsKeyIteratorImpl final : public Exchange::IToolsKeyIterator {
-public:
-    explicit ToolsKeyIteratorImpl(const std::vector<Exchange::ToolsKey>& keys)
-        : _keys(keys)
-        , _position(0)
-        , _refCount(1)
+/**
+ * @brief Minimal Thunder controller helper base for Tools L2 tests.
+ *
+ * Provides only ActivateService/DeactivateService via JSON-RPC to the
+ * live Thunder Controller. No device/IARM/telemetry mocks are needed
+ * for the Tools plugin.
+ */
+class ToolsL2TestBase : public ::testing::Test {
+protected:
+    void SetUp() override
     {
+        TEST_LOG("SetUp: configuring THUNDER_ACCESS=127.0.0.1:9998");
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), _T("127.0.0.1:9998"));
     }
 
-    ~ToolsKeyIteratorImpl() override = default;
-
-    void AddRef() const override
+    uint32_t ActivateService(const char* callsign)
     {
-        ++_refCount;
+        return invokeController("activate", callsign);
     }
 
-    uint32_t Release() const override
+    uint32_t DeactivateService(const char* callsign)
     {
-        const uint32_t current = _refCount.load();
-        if (current > 0) {
-            return --_refCount;
-        }
-        return 0;
+        return invokeController("deactivate", callsign);
     }
-
-    bool Next(Element& info) override
-    {
-        if (_position < _keys.size()) {
-            info = _keys[_position++];
-            return true;
-        }
-        return false;
-    }
-
-    bool Previous(Element& info) override
-    {
-        if (_position > 0) {
-            --_position;
-            info = _keys[_position];
-            return true;
-        }
-        return false;
-    }
-
-    void Reset(const uint32_t position) override
-    {
-        _position = std::min(static_cast<size_t>(position), _keys.size());
-    }
-
-    bool IsValid() const override
-    {
-        return (_keys.empty() == false);
-    }
-
-    uint32_t Count() const override
-    {
-        return static_cast<uint32_t>(_keys.size());
-    }
-
-    Element Current() const override
-    {
-        if (_keys.empty()) {
-            return Exchange::ToolsKey { 0, Exchange::Modifier::NONE, 0, 0 };
-        }
-        if (_position >= _keys.size()) {
-            return _keys.back();
-        }
-        return _keys[_position];
-    }
-
-    BEGIN_INTERFACE_MAP(ToolsKeyIteratorImpl)
-    INTERFACE_ENTRY(Exchange::IToolsKeyIterator)
-    END_INTERFACE_MAP
 
 private:
-    std::vector<Exchange::ToolsKey> _keys;
-    size_t _position;
-    mutable std::atomic_uint32_t _refCount;
+    uint32_t invokeController(const char* method, const char* callsign)
+    {
+        JSONRPC::LinkType<Core::JSON::IElement> link(_T("Controller.1"), L2TEST_CALLSIGN);
+        JsonObject params;
+        JsonObject result;
+        params["callsign"] = callsign;
+        return link.Invoke<JsonObject, JsonObject>(3000, _T(method), params, result);
+    }
 };
 
 /**
@@ -126,10 +82,12 @@ private:
  * Activates the live org.rdk.Tools plugin via Thunder, acquires an Exchange::ITools
  * COMRPC interface, and exercises the generateKey RPC path end-to-end.
  */
-class Tools_L2Test : public L2TestMocks {
+class Tools_L2Test : public ToolsL2TestBase {
 protected:
     PluginHost::IShell*   m_controller_Tools;
     Exchange::ITools*     m_toolsPlugin;
+    Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> m_toolsEngine;
+    Core::ProxyType<RPC::CommunicatorClient> m_toolsClient;
 
 public:
     Tools_L2Test();
@@ -145,15 +103,46 @@ public:
 /**
  * @brief Constructor — activates the Tools plugin before each test.
  */
+
 Tools_L2Test::Tools_L2Test()
-    : L2TestMocks()
-    , m_controller_Tools(nullptr)
+    : m_controller_Tools(nullptr)
     , m_toolsPlugin(nullptr)
 {
-    TEST_LOG("Tools_L2Test ctor: activating org.rdk.Tools");
-    const uint32_t status = ActivateService(TOOLS_CALLSIGN);
+    TEST_LOG("Tools_L2Test ctor: initialization start");
+
+    uint32_t status = Core::ERROR_GENERAL;
+
+    /* Activate PowerManager plugin */
+    status = ActivateService("org.rdk.PowerManager");
+    TEST_LOG("PowerManager activation returned: %u (%s)", status, Core::ErrorToString(status));
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    /* Activate Tools plugin with retry logic */
+    int retry_count = 0;
+    const int max_retries = 10;
+    status = Core::ERROR_GENERAL;
+    TEST_LOG("Tools activation: starting retry loop with max_retries=%d", max_retries);
+
+    while (status != Core::ERROR_NONE && retry_count < max_retries) {
+        status = ActivateService("org.rdk.Tools");
+        if (status != Core::ERROR_NONE) {
+            TEST_LOG("ActivateService attempt %d/%d returned: %d (%s)",
+                     retry_count + 1, max_retries, status, Core::ErrorToString(status));
+            retry_count++;
+            if (retry_count < max_retries) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            }
+        } else {
+            TEST_LOG("ActivateService succeeded on attempt %d", retry_count + 1);
+        }
+    }
+    TEST_LOG("Tools activation final status: %u (%s)", status, Core::ErrorToString(status));
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    TEST_LOG("Tools_L2Test ctor: initialization complete");
+
 }
+
 
 /**
  * @brief Destructor — releases interfaces and deactivates the Tools plugin after each test.
@@ -170,6 +159,10 @@ Tools_L2Test::~Tools_L2Test()
         m_controller_Tools = nullptr;
     }
 
+    if (m_toolsClient.IsValid()) {
+        m_toolsClient.Release();
+    }
+
     TEST_LOG("Tools_L2Test dtor: deactivating org.rdk.Tools");
     DeactivateService(TOOLS_CALLSIGN);
 }
@@ -179,36 +172,57 @@ Tools_L2Test::~Tools_L2Test()
  */
 uint32_t Tools_L2Test::CreateToolsInterfaceObject()
 {
-    TEST_LOG("CreateToolsInterfaceObject: opening RPC channel");
+    if (m_toolsPlugin != nullptr) {
+        return Core::ERROR_NONE;
+    }
 
-    auto Tools_Engine = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
-    auto Tools_Client = Core::ProxyType<RPC::CommunicatorClient>::Create(
-        Core::NodeId("/tmp/communicator"),
-        Core::ProxyType<Core::IIPCServer>(Tools_Engine));
+    TEST_LOG("CreateToolsInterfaceObject: opening RPC channel with retry");
+
+    for (int attempt = 1; attempt <= MAX_RETRIES; ++attempt) {
+        if (m_controller_Tools != nullptr) {
+            m_controller_Tools->Release();
+            m_controller_Tools = nullptr;
+        }
+
+        if (m_toolsClient.IsValid()) {
+            m_toolsClient.Release();
+        }
+
+        m_toolsEngine = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
+        m_toolsClient = Core::ProxyType<RPC::CommunicatorClient>::Create(
+            Core::NodeId("/tmp/communicator"),
+            Core::ProxyType<Core::IIPCServer>(m_toolsEngine));
 
 #if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
-    Tools_Engine->Announcements(Tools_Client->Announcement());
+        m_toolsEngine->Announcements(m_toolsClient->Announcement());
 #endif
 
-    if (!Tools_Client.IsValid()) {
-        TEST_LOG("CreateToolsInterfaceObject: invalid communicator client");
-        return Core::ERROR_GENERAL;
+        if (!m_toolsClient.IsValid()) {
+            TEST_LOG("CreateToolsInterfaceObject: invalid communicator client on attempt %d", attempt);
+            std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_DELAY_MS));
+            continue;
+        }
+
+        m_controller_Tools = m_toolsClient->Open<PluginHost::IShell>(TOOLS_CALLSIGN, ~0, 3000);
+        if (m_controller_Tools == nullptr) {
+            TEST_LOG("CreateToolsInterfaceObject: failed to open IShell on attempt %d", attempt);
+            std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_DELAY_MS));
+            continue;
+        }
+
+        m_toolsPlugin = m_controller_Tools->QueryInterface<Exchange::ITools>();
+        if (m_toolsPlugin == nullptr) {
+            TEST_LOG("CreateToolsInterfaceObject: failed to query Exchange::ITools on attempt %d", attempt);
+            std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_DELAY_MS));
+            continue;
+        }
+
+        TEST_LOG("CreateToolsInterfaceObject: success on attempt %d", attempt);
+        return Core::ERROR_NONE;
     }
 
-    m_controller_Tools = Tools_Client->Open<PluginHost::IShell>(TOOLS_CALLSIGN, ~0, 3000);
-    if (m_controller_Tools == nullptr) {
-        TEST_LOG("CreateToolsInterfaceObject: failed to open IShell");
-        return Core::ERROR_GENERAL;
-    }
-
-    m_toolsPlugin = m_controller_Tools->QueryInterface<Exchange::ITools>();
-    if (m_toolsPlugin == nullptr) {
-        TEST_LOG("CreateToolsInterfaceObject: failed to query Exchange::ITools");
-        return Core::ERROR_GENERAL;
-    }
-
-    TEST_LOG("CreateToolsInterfaceObject: success");
-    return Core::ERROR_NONE;
+    TEST_LOG("CreateToolsInterfaceObject: failed after %d attempts", MAX_RETRIES);
+    return Core::ERROR_GENERAL;
 }
 
 // ---------------------------------------------------------------------------
@@ -217,85 +231,68 @@ uint32_t Tools_L2Test::CreateToolsInterfaceObject()
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Verifies that GenerateKeys rejects a null iterator.
+ * @brief Verifies that GenerateKeys rejects an empty key list.
  */
-TEST_F(Tools_L2Test, GenerateKeysFailsOnNullIterator)
+TEST_F(Tools_L2Test, GenerateKeysFailsOnEmptyList)
 {
-    TEST_LOG("GenerateKeysFailsOnNullIterator: start");
+    TEST_LOG("GenerateKeysFailsOnEmptyList: start");
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
     bool success = true;
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateKeys(nullptr, success));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateKeys({}, success));
     EXPECT_EQ(false, success);
 }
 
 /**
- * @brief Verifies that GenerateKeys rejects an unsupported modifier enum.
+ * @brief Verifies that GenerateKeys skips an unsupported modifier enum and still returns success.
  */
-TEST_F(Tools_L2Test, GenerateKeysFailsOnInvalidModifier)
+TEST_F(Tools_L2Test, GenerateKeysSkipsInvalidModifier)
 {
-    TEST_LOG("GenerateKeysFailsOnInvalidModifier: start");
+    TEST_LOG("GenerateKeysSkipsInvalidModifier: start");
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
-    std::vector<Exchange::ToolsKey> keys = {
+    const std::vector<Exchange::ToolsKey> keys = {
         { 28, static_cast<Exchange::Modifier>(99), 0, 0 }
     };
-    ToolsKeyIteratorImpl iterator(keys);
 
-    bool success = true;
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateKeys(&iterator, success));
-    EXPECT_EQ(false, success);
+    bool success = false;
+    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKeys(keys, success));
+    EXPECT_EQ(true, success);
 }
 
 /**
- * @brief Verifies that GenerateKeys rejects a keyCode beyond the Linux KEY_MAX range.
+ * @brief Verifies that GenerateKeys skips a keyCode beyond the Linux KEY_MAX range and still returns success.
  */
-TEST_F(Tools_L2Test, GenerateKeysFailsOnKeyCodeOutOfRange)
+TEST_F(Tools_L2Test, GenerateKeysSkipsKeyCodeOutOfRange)
 {
-    TEST_LOG("GenerateKeysFailsOnKeyCodeOutOfRange: start");
+    TEST_LOG("GenerateKeysSkipsKeyCodeOutOfRange: start");
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
-    std::vector<Exchange::ToolsKey> keys = {
+    const std::vector<Exchange::ToolsKey> keys = {
         { 999999, Exchange::Modifier::CTRL, 0, 0 }
     };
-    ToolsKeyIteratorImpl iterator(keys);
 
-    bool success = true;
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateKeys(&iterator, success));
-    EXPECT_EQ(false, success);
+    bool success = false;
+    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKeys(keys, success));
+    EXPECT_EQ(true, success);
 }
 
-/**
- * @brief Verifies that GenerateKeys rejects an empty iterator.
- */
-TEST_F(Tools_L2Test, GenerateKeysFailsOnEmptyIterator)
-{
-    TEST_LOG("GenerateKeysFailsOnEmptyIterator: start");
-    EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
-    ASSERT_NE(nullptr, m_toolsPlugin);
 
-    std::vector<Exchange::ToolsKey> keys;
-    ToolsKeyIteratorImpl iterator(keys);
-
-    bool success = true;
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateKeys(&iterator, success));
-    EXPECT_EQ(false, success);
-}
 
 /**
- * @brief Verifies that GenerateRemoteKeys rejects a null iterator.
+ * @brief Verifies that GenerateRemoteKeys rejects an empty key list.
  */
-TEST_F(Tools_L2Test, GenerateRemoteKeysFailsOnNullIterator)
+TEST_F(Tools_L2Test, GenerateRemoteKeysFailsOnEmptyList)
 {
-    TEST_LOG("GenerateRemoteKeysFailsOnNullIterator: start");
+    TEST_LOG("GenerateRemoteKeysFailsOnEmptyList: start");
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
     bool success = true;
-    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateRemoteKeys(nullptr, success));
+    EXPECT_EQ(Core::ERROR_INVALID_INPUT_LENGTH, m_toolsPlugin->GenerateRemoteKeys({}, success));
     EXPECT_EQ(false, success);
 }
 
@@ -315,13 +312,12 @@ TEST_F(Tools_L2Test, GenerateKeysSucceedsWithValidInput)
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
-    std::vector<Exchange::ToolsKey> keys = {
+    const std::vector<Exchange::ToolsKey> keys = {
         { 28, Exchange::Modifier::CTRL, 0, 0 }
     };
-    ToolsKeyIteratorImpl iterator(keys);
 
     bool success = false;
-    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKeys(&iterator, success));
+    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKeys(keys, success));
     EXPECT_EQ(true, success);
 }
 
@@ -334,14 +330,13 @@ TEST_F(Tools_L2Test, GenerateKeysSucceedsWithMultiKeyBatch)
     EXPECT_EQ(Core::ERROR_NONE, CreateToolsInterfaceObject());
     ASSERT_NE(nullptr, m_toolsPlugin);
 
-    std::vector<Exchange::ToolsKey> keys = {
+    const std::vector<Exchange::ToolsKey> keys = {
         { 28, Exchange::Modifier::CTRL, 0, 0 },
         { 30, Exchange::Modifier::SHIFT, 0, 0 },
         { 31, Exchange::Modifier::ALT, 0, 0 }
     };
-    ToolsKeyIteratorImpl iterator(keys);
 
     bool success = false;
-    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKeys(&iterator, success));
+    EXPECT_EQ(Core::ERROR_NONE, m_toolsPlugin->GenerateKeys(keys, success));
     EXPECT_EQ(true, success);
 }

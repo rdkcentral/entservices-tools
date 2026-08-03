@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2026 RDK Management
+# Copyright 2023 RDK Management
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 # limitations under the License.
 
 
-set(PLUGIN_NAME L2TestsPE)
+set(PLUGIN_NAME ToolsL2TestsPE)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(THUNDER_PORT 9998)
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 
-if(RDK_SERVICE_L2_TEST)
+if(PLUGIN_TOOLS)
     set(SRC_FILES ${SRC_FILES} tests/Tools_L2Test.cpp)
 endif()
 
@@ -34,10 +35,23 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 target_compile_definitions(${MODULE_NAME}
             PRIVATE
             MODULE_NAME=Plugin_${PLUGIN_NAME}
-            THUNDER_PORT="${THUNDER_PORT}")
+            THUNDER_PORT="${THUNDER_PORT}"
+            ENABLE_SYSTIMEMGR_SUPPORT)
 
 target_compile_options(${MODULE_NAME} PRIVATE -Wno-error)
+target_link_directories(${MODULE_NAME} PUBLIC ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins)
 target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+
+if(PLUGIN_TOOLS)
+    find_library(TOOLS_IMPL_LIBRARIES NAMES ${NAMESPACE}ToolsImplementation)
+    if(TOOLS_IMPL_LIBRARIES)
+        message("Found ToolsImplementation - ${TOOLS_IMPL_LIBRARIES}")
+        target_link_libraries(${MODULE_NAME} PRIVATE ${TOOLS_IMPL_LIBRARIES})
+    else()
+        message("ToolsImplementation library not found, linking by name")
+        target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}ToolsImplementation)
+    endif()
+endif()
 
 if (NOT L2_TEST_OOP_RPC)
     find_library(TESTMOCKLIB_LIBRARIES NAMES TestMocklib)
@@ -59,17 +73,14 @@ endif (MOCKACCESSOR_LIBRARIES)
 
 target_include_directories(
     ${MODULE_NAME} PRIVATE ./
+    ../../plugin
     ${CMAKE_SOURCE_DIR}/../entservices-helpers/helpers
-    ../../helpers
     ../../../entservices-testframework/Tests/mocks
     ../../../entservices-testframework/Tests/mocks/thunder
     ../../../entservices-testframework/Tests/mocks/devicesettings
     ../../../entservices-testframework/Tests/mocks/MockPlugin
-    ../../../entservices-testframework/Tests/L2Tests
     ../../../entservices-testframework/Tests/L2Tests/L2TestsPlugin
-    ../../../entservices-apis
     ${CMAKE_INSTALL_PREFIX}/include
-    ${CMAKE_INSTALL_PREFIX}/include/WPEFramework
     )
 
 install(TARGETS ${MODULE_NAME} DESTINATION lib)
