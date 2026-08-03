@@ -1,5 +1,25 @@
+/**
+* If not stated otherwise in this file or this component's LICENSE
+* file the following copyright and licenses apply:
+*
+* Copyright 2026 RDK Management
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+**/
+
 #include "ToolsImplementation.h"
 #include "UtilsJsonRpc.h"
+#include "UtilsLogging.h"
 
 #include <chrono>
 #include <cmath>
@@ -15,7 +35,7 @@
 
 #define API_VERSION_NUMBER_MAJOR 1
 #define API_VERSION_NUMBER_MINOR 0
-#define API_VERSION_NUMBER_PATCH 6
+#define API_VERSION_NUMBER_PATCH 0
 
 namespace WPEFramework {
 namespace Plugin {
@@ -28,18 +48,18 @@ ToolsImplementation::ToolsImplementation()
 	, _uinputInitialized(false)
 	, _uinputFd(-1)
 {
-	LOGERR("%s: Enter", __FUNCTION__);
+	LOGDBG("%s: Enter", __FUNCTION__);
 }
 
 ToolsImplementation::~ToolsImplementation()
 {
-	LOGERR("%s: Enter", __FUNCTION__);
+	LOGDBG("%s: Enter", __FUNCTION__);
 	stopWorkerThread();
 }
 
 void ToolsImplementation::stopWorkerThread()
 {
-	LOGERR("%s: Enter", __FUNCTION__);
+	LOGDBG("%s: Enter", __FUNCTION__);
 	{
 		std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
 		_sendKeyThreadExit = true;
@@ -64,7 +84,7 @@ void ToolsImplementation::stopWorkerThread()
 
 bool ToolsImplementation::initializeUinputDevice()
 {
-	LOGERR("%s: Enter", __FUNCTION__);
+	LOGDBG("%s: Enter", __FUNCTION__);
 	if (_uinputFd >= 0) {
 		return true;
 	}
@@ -115,7 +135,7 @@ bool ToolsImplementation::initializeUinputDevice()
 
 void ToolsImplementation::shutdownUinputDevice()
 {
-	LOGERR("%s: Enter", __FUNCTION__);
+	LOGDBG("%s: Enter", __FUNCTION__);
 	if (_uinputFd >= 0) {
 		ioctl(_uinputFd, UI_DEV_DESTROY);
 		close(_uinputFd);
@@ -125,7 +145,7 @@ void ToolsImplementation::shutdownUinputDevice()
 
 bool ToolsImplementation::sendKeyEvent(const uint32_t keyCode, const bool pressed)
 {
-	LOGERR("%s: Enter", __FUNCTION__);
+	LOGDBG("%s: Enter", __FUNCTION__);
 	if (_uinputFd < 0) {
 		return false;
 	}
@@ -266,7 +286,7 @@ static uint32_t remoteKeyCodeToLinuxKeyCode(const Exchange::RemoteKeyCode keyCod
 
 uint32_t ToolsImplementation::modifierToLinuxKeyCode(const string& modifier) const
 {
-	LOGERR("%s: Enter", __FUNCTION__);
+	LOGDBG("%s: Enter", __FUNCTION__);
 	if (modifier == "ctrl") {
 		return KEY_LEFTCTRL;
 	}
@@ -282,7 +302,7 @@ uint32_t ToolsImplementation::modifierToLinuxKeyCode(const string& modifier) con
 
 void ToolsImplementation::dispatchQueuedKeyEvent(const QueuedKeyEvent& keyEvent)
 {
-	LOGERR("%s: Enter", __FUNCTION__);
+	LOGDBG("%s: Enter", __FUNCTION__);
 	if ((_uinputInitialized == false) || (_uinputFd < 0)) {
 		LOGERR("ToolsImplementation::dispatchQueuedKeyEvent uinput is not initialized");
 		return;
@@ -313,7 +333,7 @@ void ToolsImplementation::dispatchQueuedKeyEvent(const QueuedKeyEvent& keyEvent)
 
 void ToolsImplementation::threadSendKeyEvent()
 {
-	LOGERR("%s: Enter", __FUNCTION__);
+	LOGDBG("%s: Enter", __FUNCTION__);
 	while (true) {
 		QueuedKeyEvent keyEvent;
 		{
@@ -358,7 +378,7 @@ void ToolsImplementation::threadSendKeyEvent()
  */
 Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 {
-	LOGERR("%s: Enter", __FUNCTION__);
+	LOGDBG("%s: Enter", __FUNCTION__);
 	if (service == nullptr) {
 		LOGERR("ToolsImplementation::Configure failed, service is null");
 		return Core::ERROR_GENERAL;
@@ -387,34 +407,21 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 }
  
 
-Core::hresult ToolsImplementation::GenerateKeys(Exchange::IToolsKeyIterator* const keys, bool& success)
+Core::hresult ToolsImplementation::GenerateKeys(const std::vector<Exchange::ToolsKey>& keys, bool& success)
 {
-	LOGERR("%s: Enter", __FUNCTION__);
-	if (keys == nullptr) {
-		LOGERR("ToolsImplementation::GenerateKeys invalid input: keys iterator is null");
+	LOGDBG("%s: Enter", __FUNCTION__);
+	if (keys.empty()) {
+		LOGERR("ToolsImplementation::GenerateKeys invalid input: keys list is empty");
 		success = false;
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 
-	std::vector<Exchange::ToolsKey> requestedKeys;
-	Exchange::ToolsKey key;
-	while (keys->Next(key) == true) {
-		requestedKeys.push_back(key);
-	}
-
-	if (requestedKeys.empty()) {
-		LOGERR("ToolsImplementation::GenerateKeys invalid input: keys iterator is empty");
-		success = false;
-		return Core::ERROR_INVALID_INPUT_LENGTH;
-	}
-
-	for (uint32_t index = 0; index < requestedKeys.size(); ++index) {
-		const Exchange::ToolsKey& currentKey = requestedKeys[index];
+	for (uint32_t index = 0; index < keys.size(); ++index) {
+		const Exchange::ToolsKey& currentKey = keys[index];
 
 		if ((currentKey.code < 0) || (currentKey.code > KEY_MAX)) {
-			LOGERR("ToolsImplementation::GenerateKeys invalid linux keyCode '%d' at entry %u", currentKey.code, index);
-			success = false;
-			return Core::ERROR_INVALID_INPUT_LENGTH;
+			LOGWARN("ToolsImplementation::GenerateKeys invalid linux keyCode '%d' at entry %u, skipping", currentKey.code, index);
+			continue;
 		}
 
 		QueuedKeyEvent keyEvent;
@@ -452,9 +459,8 @@ Core::hresult ToolsImplementation::GenerateKeys(Exchange::IToolsKeyIterator* con
 			keyEvent.modifiers.push_back("ctrl");
 			break;
 		default:
-			LOGERR("ToolsImplementation::GenerateKeys invalid modifier '%u' at entry %u", static_cast<uint32_t>(currentKey.modifier), index);
-			success = false;
-			return Core::ERROR_INVALID_INPUT_LENGTH;
+			LOGWARN("ToolsImplementation::GenerateKeys invalid modifier '%u' at entry %u, skipping", static_cast<uint32_t>(currentKey.modifier), index);
+			continue;
 		}
 
 		std::lock_guard<std::mutex> lock(_sendKeyEventMutex);
@@ -467,35 +473,22 @@ Core::hresult ToolsImplementation::GenerateKeys(Exchange::IToolsKeyIterator* con
 	return Core::ERROR_NONE;
 }
 
-Core::hresult ToolsImplementation::GenerateRemoteKeys(Exchange::IRemoteKeyIterator* const keys, bool& success)
+Core::hresult ToolsImplementation::GenerateRemoteKeys(const std::vector<Exchange::RemoteKey>& keys, bool& success)
 {
-	LOGERR("%s: Enter", __FUNCTION__);
-	if (keys == nullptr) {
-		LOGERR("ToolsImplementation::GenerateRemoteKeys invalid input: keys iterator is null");
+	LOGDBG("%s: Enter", __FUNCTION__);
+	if (keys.empty()) {
+		LOGERR("ToolsImplementation::GenerateRemoteKeys invalid input: keys list is empty");
 		success = false;
 		return Core::ERROR_INVALID_INPUT_LENGTH;
 	}
 
-	std::vector<Exchange::RemoteKey> requestedKeys;
-	Exchange::RemoteKey key;
-	while (keys->Next(key) == true) {
-		requestedKeys.push_back(key);
-	}
-
-	if (requestedKeys.empty()) {
-		LOGERR("ToolsImplementation::GenerateRemoteKeys invalid input: keys iterator is empty");
-		success = false;
-		return Core::ERROR_INVALID_INPUT_LENGTH;
-	}
-
-	for (uint32_t index = 0; index < requestedKeys.size(); ++index) {
-		const Exchange::RemoteKey& currentKey = requestedKeys[index];
+	for (uint32_t index = 0; index < keys.size(); ++index) {
+		const Exchange::RemoteKey& currentKey = keys[index];
 		const uint32_t linuxKeyCode = remoteKeyCodeToLinuxKeyCode(currentKey.code);
 
 		if (linuxKeyCode == KEY_RESERVED) {
-			LOGERR("ToolsImplementation::GenerateRemoteKeys unsupported remote key code '%u' at entry %u", static_cast<uint32_t>(currentKey.code), index);
-			success = false;
-			return Core::ERROR_INVALID_INPUT_LENGTH;
+			LOGWARN("ToolsImplementation::GenerateRemoteKeys unsupported remote key code '%u' at entry %u, skipping", static_cast<uint32_t>(currentKey.code), index);
+			continue;
 		}
 
 		QueuedKeyEvent keyEvent;
