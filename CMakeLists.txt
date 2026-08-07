@@ -19,7 +19,14 @@
 
 cmake_minimum_required(VERSION 3.3)
 
+project(entservices-tools LANGUAGES C CXX)
+
 find_package(WPEFramework)
+include(GNUInstallDirs)
+
+if(NOT CMAKE_INSTALL_LIBDIR)
+    set(CMAKE_INSTALL_LIBDIR "lib")
+endif()
 
 option(COMCAST_CONFIG "Comcast services configuration" ON)
 if(COMCAST_CONFIG)
@@ -31,6 +38,14 @@ string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
 
 # for writing pc and config files
 include(CmakeHelperFunctions)
+
+if(RDK_SERVICES_L1_TEST)
+    add_subdirectory(Tests/L1Tests)
+endif()
+
+if(RDK_SERVICE_L2_TEST)
+    add_subdirectory(Tests/L2Tests)
+endif()
 
 if(PLUGIN_TOOLS)
     add_subdirectory(plugin)

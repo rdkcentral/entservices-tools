@@ -1,0 +1,22 @@
+permissions:
+  contents: read
+
+name: main-workflow
+
+on:
+  push:
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
+  pull_request:
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
+    types: [ opened, synchronize, reopened, ready_for_review ]
+
+jobs:
+  trigger-L1:
+    uses: ./.github/workflows/L1-tests.yml
+    with:
+      caller_source: local
+
+  trigger-L2:
+    uses: ./.github/workflows/L2-tests.yml
+    with:
+      caller_source: local
