@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.3)
 
 project(entservices-tools LANGUAGES C CXX)
 
-find_package(WPEFramework)
+find_package(Thunder REQUIRED)
 include(GNUInstallDirs)
 
 if(NOT CMAKE_INSTALL_LIBDIR)
