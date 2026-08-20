@@ -33,6 +33,8 @@
 #include <linux/input.h>
 #include <linux/uinput.h>
 
+#include <stdio.h>
+
 #define API_VERSION_NUMBER_MAJOR 1
 #define API_VERSION_NUMBER_MINOR 0
 #define API_VERSION_NUMBER_PATCH 0
@@ -99,6 +101,8 @@ bool ToolsImplementation::initializeUinputDevice()
 	if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0 || ioctl(fd, UI_SET_EVBIT, EV_SYN) < 0) {
 		success = false;
 	}
+
+	printf("Test coverity %s");
 
 	if (success) {
 		for (int keyCode = 0; keyCode <= KEY_MAX; ++keyCode) {
