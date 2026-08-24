@@ -1,6 +1,6 @@
 # RDK EntServices Tools
 
-WPEFramework (Thunder) plugin that exposes device tool operations through JSON-RPC and COM-RPC.
+Thunder (Thunder) plugin that exposes device tool operations through JSON-RPC and COM-RPC.
 
 ## Current Scope
 

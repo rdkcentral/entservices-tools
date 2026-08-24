@@ -26,10 +26,10 @@
 #include <interfaces/json/JTools.h>
 #include <interfaces/json/JsonData_Tools.h>
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 
-namespace WPEFramework {
+namespace Thunder {
 
     namespace Plugin {
         class Tools : public PluginHost::IPlugin, public PluginHost::JSONRPC {
@@ -77,4 +77,4 @@ namespace WPEFramework {
         
 
 	} // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

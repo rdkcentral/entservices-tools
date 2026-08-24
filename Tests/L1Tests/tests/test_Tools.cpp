@@ -34,7 +34,7 @@
 #include "FactoriesImplementation.h"
 #include "ThunderPortability.h"
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 namespace {
 

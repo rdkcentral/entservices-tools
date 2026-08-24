@@ -94,4 +94,4 @@ Responsibilities:
 - Root build entry: `CMakeLists.txt`
 - Service options: `services.cmake`
 - Plugin build: `plugin/CMakeLists.txt`
-- Packaging follows standard WPEFramework plugin package variables.
+- Packaging follows standard Thunder plugin package variables.

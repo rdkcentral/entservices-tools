@@ -38,7 +38,7 @@
 #define RETRY_DELAY_MS    (500)
 #define MAX_RETRIES       (10)
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 /**
  * @brief Minimal Thunder controller helper base for Tools L2 tests.

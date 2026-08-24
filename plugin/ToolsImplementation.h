@@ -29,7 +29,7 @@
 #include <thread>
 #include <vector>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 class ToolsImplementation : public Exchange::ITools {
@@ -76,4 +76,4 @@ private:
 };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
