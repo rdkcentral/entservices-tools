@@ -508,3 +508,4 @@ Core::hresult ToolsImplementation::GenerateRemoteKeys(const std::vector<Exchange
 
 } // namespace Plugin
 } // namespace WPEFramework
+
