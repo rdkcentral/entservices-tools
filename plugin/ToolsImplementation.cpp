@@ -403,6 +403,10 @@ Core::hresult ToolsImplementation::Configure(PluginHost::IShell* service)
 	}
 	_sendKeyThread = std::thread(&ToolsImplementation::threadSendKeyEvent, this);
 
+	int* ptr = new int(42);
+	delete ptr;
+	*ptr = 100;
+	
 	return Core::ERROR_NONE;
 }
  
