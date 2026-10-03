@@ -17,11 +17,19 @@
 # limitations under the License.
 ###
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
 project(entservices-tools LANGUAGES C CXX)
 
-find_package(Thunder REQUIRED)
+find_package(Thunder QUIET)
+
+if(NOT Thunder_FOUND)
+    find_package(WPEFramework QUIET)
+    if(NOT WPEFramework_FOUND)
+        message(FATAL_ERROR "Neither Thunder nor WPEFramework found in sysroot")
+    endif()
+    add_compile_definitions(Thunder=WPEFramework)
+endif()
 include(GNUInstallDirs)
 
 if(NOT CMAKE_INSTALL_LIBDIR)
@@ -51,17 +59,17 @@ if(PLUGIN_TOOLS)
     add_subdirectory(plugin)
 endif()
 
-if(Thunder_CREATE_IPKG_TARGETS)
+if(${NAMESPACE}_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
     set(CPACK_COMPONENTS_GROUPING IGNORE)
 
-    set(CPACK_DEBIAN_PACKAGE_NAME "${Thunder_PLUGINS_OPKG_NAME}")
-    set(CPACK_DEBIAN_PACKAGE_VERSION "${Thunder_PLUGINS_OPKG_VERSION}")
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${Thunder_PLUGINS_OPKG_ARCHITECTURE}")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${Thunder_PLUGINS_OPKG_MAINTAINER}")
-    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${Thunder_PLUGINS_OPKG_DESCRIPTION}")
-    set(CPACK_PACKAGE_FILE_NAME "${Thunder_PLUGINS_OPKG_FILE_NAME}")
+    set(CPACK_DEBIAN_PACKAGE_NAME "${${NAMESPACE}_PLUGINS_OPKG_NAME}")
+    set(CPACK_DEBIAN_PACKAGE_VERSION "${${NAMESPACE}_PLUGINS_OPKG_VERSION}")
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${${NAMESPACE}_PLUGINS_OPKG_ARCHITECTURE}")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${${NAMESPACE}_PLUGINS_OPKG_MAINTAINER}")
+    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${${NAMESPACE}_PLUGINS_OPKG_DESCRIPTION}")
+    set(CPACK_PACKAGE_FILE_NAME "${${NAMESPACE}_PLUGINS_OPKG_FILE_NAME}")
 
     include(CPack)
 endif()
