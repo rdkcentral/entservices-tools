@@ -34,6 +34,8 @@ set(TEST_LIB
     ${NAMESPACE}ToolsImplementation
 )
 
+string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
+
 set(TEST_INC
     ../../plugin
 )
@@ -46,7 +48,7 @@ set_source_files_properties(
 
 include_directories(${TEST_INC})
 
-target_link_directories(${MODULE_NAME} PUBLIC ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib/${NAMESPACE}/plugins)
+target_link_directories(${MODULE_NAME} PUBLIC ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 target_link_libraries(${MODULE_NAME} ${TEST_LIB})
 
@@ -59,5 +61,5 @@ target_include_directories(${MODULE_NAME}
     ${CMAKE_SOURCE_DIR}/../Thunder/Source/plugins
 )
 
-install(TARGETS ${MODULE_NAME} DESTINATION lib)
+install(TARGETS ${MODULE_NAME} DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 write_config(${PLUGIN_NAME})
