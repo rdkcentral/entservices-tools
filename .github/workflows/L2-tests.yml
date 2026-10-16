@@ -105,6 +105,18 @@ jobs:
           path: entservices-testframework
           ref: feature/RDKEMW-25013
 
+      - name: Checkout rdk-halif-device_settings
+        uses: actions/checkout@v3
+        with:
+          repository: rdkcentral/rdk-halif-device_settings
+          path: rdk-halif-device_settings
+          ref: 6.0.1
+
+      - name: Install DeviceSettings HAL headers
+        run: |
+          mkdir -p "/install/usr/include"
+          cp -r "/rdk-halif-device_settings/include/." "/install/usr/include/"
+
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
@@ -245,6 +257,18 @@ jobs:
           cmake --build build/googletest -j8
           &&
           cmake --install build/googletest
+
+      - name: Build ds-hal stub
+        run: >
+          cmake
+          -S "/entservices-testframework/Tests/mocks/devicesettings"
+          -B build/ds-hal
+          -DCMAKE_INSTALL_PREFIX="/install/usr"
+          -DCMAKE_CXX_FLAGS="-I /install/usr/include"
+          &&
+          cmake --build build/ds-hal -j8
+          &&
+          cmake --install build/ds-hal
 
       - name: Build mocks
         run: >
