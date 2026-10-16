@@ -126,7 +126,6 @@ cd entservices-testframework/Tests
 echo " Empty mocks creation to avoid compilation errors"
 echo "======================================================================================"
 mkdir -p headers
-mkdir -p headers/rdk/ds
 mkdir -p headers/rdk/iarmbus
 mkdir -p headers/rdk/iarmmgrs-hal
 mkdir -p headers/rdk/halif/deepsleep-manager
@@ -138,11 +137,6 @@ echo "==========================================================================
 echo "empty headers creation"
 cd headers
 echo "current working dir: "${PWD}
-touch rdk/ds/audioOutputPort.hpp
-touch rdk/ds/exception.hpp
-touch rdk/ds/host.hpp
-touch rdk/ds/sleepMode.hpp
-touch rdk/ds/videoOutputPort.hpp
 touch rdk/iarmbus/libIARM.h
 touch rdk/iarmbus/libIBus.h
 touch rdk/iarmbus/libIBusDaemon.h
