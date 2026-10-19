@@ -630,7 +630,7 @@ jobs:
           genhtml
           -o coverage
           -t "entservices-tools coverage"
-          filtered_coverage.info
+          filtered_coverage.info || true
 
       - name: Upload artifacts
         if: ${{ !env.ACT && env.RDK_SERVICE_L2_TEST == 'ON'}}

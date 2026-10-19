@@ -73,10 +73,10 @@ endif (MOCKACCESSOR_LIBRARIES)
 
 find_library(DSHAL_LIBRARIES NAMES ds-hal)
 if (DSHAL_LIBRARIES)
-    message ("Found ds-hal library - ")
-    target_link_libraries( PRIVATE -Wl,--no-as-needed  -Wl,--as-needed)
+    message ("Found ds-hal library - ${DSHAL_LIBRARIES}")
+    target_link_libraries(${MODULE_NAME} PRIVATE -Wl,--no-as-needed ${DSHAL_LIBRARIES} -Wl,--as-needed)
 else (DSHAL_LIBRARIES)
-     message ("Require  library")
+     message ("Require ${DSHAL_LIBRARIES} library")
 endif (DSHAL_LIBRARIES)
 
 
