@@ -114,8 +114,8 @@ jobs:
 
       - name: Install DeviceSettings HAL headers
         run: |
-          mkdir -p "/install/usr/include"
-          cp -r "/rdk-halif-device_settings/include/." "/install/usr/include/"
+          mkdir -p "$GITHUB_WORKSPACE/install/usr/include"
+          cp -r "$GITHUB_WORKSPACE/rdk-halif-device_settings/include/." "$GITHUB_WORKSPACE/install/usr/include/"
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
@@ -261,10 +261,10 @@ jobs:
       - name: Build ds-hal stub
         run: >
           cmake
-          -S "/entservices-testframework/Tests/mocks/devicesettings"
+          -S "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings"
           -B build/ds-hal
-          -DCMAKE_INSTALL_PREFIX="/install/usr"
-          -DCMAKE_CXX_FLAGS="-I /install/usr/include"
+          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
+          -DCMAKE_CXX_FLAGS="-I $GITHUB_WORKSPACE/install/usr/include"
           &&
           cmake --build build/ds-hal -j8
           &&
