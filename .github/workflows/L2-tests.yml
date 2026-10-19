@@ -405,6 +405,7 @@ jobs:
           -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/install/usr"
           -DCMAKE_LIBRARY_PATH="$GITHUB_WORKSPACE/install/usr/lib"
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
+          -DCMAKE_SHARED_LINKER_FLAGS="-L$GITHUB_WORKSPACE/install/usr/lib -Wl,--no-as-needed -lds-hal -Wl,--as-needed"
           -DCMAKE_CXX_FLAGS="
           -DEXCEPTIONS_ENABLE=ON
           -fprofile-arcs
