@@ -71,13 +71,6 @@ else (MOCKACCESSOR_LIBRARIES)
      message ("Require ${MOCKACCESSOR_LIBRARIES} library")
 endif (MOCKACCESSOR_LIBRARIES)
 
-find_library(DSHAL_LIBRARIES NAMES ds-hal)
-if (DSHAL_LIBRARIES)
-    message ("Found ds-hal library - ${DSHAL_LIBRARIES}")
-    target_link_libraries(${MODULE_NAME} PRIVATE -Wl,--no-as-needed ${DSHAL_LIBRARIES} -Wl,--as-needed)
-else (DSHAL_LIBRARIES)
-     message ("Require ${DSHAL_LIBRARIES} library")
-endif (DSHAL_LIBRARIES)
 
 
 target_include_directories(
@@ -86,7 +79,6 @@ target_include_directories(
     ${CMAKE_SOURCE_DIR}/../entservices-helpers/helpers
     ../../../entservices-testframework/Tests/mocks
     ../../../entservices-testframework/Tests/mocks/thunder
-    ../../../entservices-testframework/Tests/mocks/devicesettings
     ../../../entservices-testframework/Tests/mocks/MockPlugin
     ../../../entservices-testframework/Tests/L2Tests/L2TestsPlugin
     ${CMAKE_INSTALL_PREFIX}/include

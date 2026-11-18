@@ -49,7 +49,6 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-tools \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/network \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/thunder \
--I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/devicesettings \
 -I /usr/include/libdrm \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/Iarm.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/Rfc.h \

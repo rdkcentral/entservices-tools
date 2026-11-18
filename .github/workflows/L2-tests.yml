@@ -105,18 +105,6 @@ jobs:
           path: entservices-testframework
           ref: develop
 
-      - name: Checkout rdk-halif-device_settings
-        uses: actions/checkout@v3
-        with:
-          repository: rdkcentral/rdk-halif-device_settings
-          path: rdk-halif-device_settings
-          ref: 6.0.1
-
-      - name: Install DeviceSettings HAL headers
-        run: |
-          mkdir -p "$GITHUB_WORKSPACE/install/usr/include"
-          cp -r "$GITHUB_WORKSPACE/rdk-halif-device_settings/include/." "$GITHUB_WORKSPACE/install/usr/include/"
-
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
@@ -258,18 +246,6 @@ jobs:
           &&
           cmake --install build/googletest
 
-      - name: Build ds-hal stub
-        run: >
-          cmake
-          -S "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings"
-          -B build/ds-hal
-          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
-          -DCMAKE_CXX_FLAGS="-I $GITHUB_WORKSPACE/install/usr/include"
-          &&
-          cmake --build build/ds-hal -j8
-          &&
-          cmake --install build/ds-hal
-
       - name: Build mocks
         run: >
           cmake
@@ -404,7 +380,6 @@ jobs:
           -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/install/usr"
           -DCMAKE_LIBRARY_PATH="$GITHUB_WORKSPACE/install/usr/lib"
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
-          -DCMAKE_SHARED_LINKER_FLAGS="-L$GITHUB_WORKSPACE/install/usr/lib -Wl,--no-as-needed -lds-hal -Wl,--as-needed"
           -DCMAKE_CXX_FLAGS="
           -DEXCEPTIONS_ENABLE=ON
           -fprofile-arcs
